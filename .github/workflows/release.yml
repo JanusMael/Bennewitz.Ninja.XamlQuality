@@ -148,8 +148,19 @@ jobs:
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate
 
+      # ⚠ NAMED HERE TOO, for the same reason as the push above — and the reasoning that says a glob
+      # is fine here is the reasoning worth distrusting. "Both packed ids are pushable" is true of
+      # today's project list, not of the first release that adds a packable project; that one would
+      # be attached to a release nobody chose it for. The failure is also QUIETER than the nuget.org
+      # one: a release asset can be deleted, so it never teaches the lesson permanently, it just
+      # ships something silently. ReleaseWorkflowTests fails if a glob returns to this file.
       - name: Create GitHub Release
         if: env.RELEASING == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "${{ env.TAG }}" ./packages/Release/*.nupkg --generate-notes --title "${{ env.TAG }}"
+        run: |
+          gh release create "${{ env.TAG }}" \
+            --title "${{ env.TAG }}" \
+            --generate-notes \
+            ./packages/Release/Bennewitz.Ninja.XamlQuality.${{ env.VERSION }}.nupkg \
+            ./packages/Release/Bennewitz.Ninja.XamlQuality.ThemeAudit.${{ env.VERSION }}.nupkg
