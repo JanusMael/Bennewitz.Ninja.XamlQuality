@@ -1,17 +1,20 @@
 using System.Runtime.CompilerServices;
 
-// The CLI face of this library. Splitting the tool out of the analysis turned what used to be
-// one assembly into two, and the audit types were internal — correct then, and still correct now:
-// they are implementation, not the API a consumer should bind to.
+// The CLI face of this library, which reaches the seven genuinely internal helpers below.
 //
-// ⛔ THE ALTERNATIVE WAS TO MAKE THEM PUBLIC, AND THAT WOULD HAVE BEEN A MISTAKE MADE BY REFLEX.
-// Publishing ~4,000 lines of internals as API because the compiler asked is how a package acquires
-// a surface nobody designed — and a public surface is a promise, immutable in practice once
-// someone binds to it.
+// ⛔ THE AUDIT SURFACE IS PUBLIC, AND HAS BEEN SINCE 2026.3.920. Whatever the intent, that is what
+// shipped: 53 public top-level types under ThemeAudit/ against 7 internal. AuditRunner,
+// AuditConfig, MarkdownReport, AuditResult, CompatOutcome, CompatHow, CompatEntry,
+// ConsumerThemeFindings, UndefinedKeyFinding, ContrastFinding, ContrastStatus and the whole config
+// surface are all reachable by any consumer, and Bennewitz.Ninja.DiffView binds to eleven of them.
 //
-// ⚠ Curating a real audit API for consumers is worth doing, and is deliberately NOT this change.
-// Until then the supported surface is IXamlRule and the rules; the audit is reachable through the
-// tool.
+// ⚠ NARROWING IT IS A BREAKING CHANGE. A published surface is a promise once someone binds to it,
+// and one already has. Curating a smaller, deliberate audit API is still worth doing — but it is a
+// major-version decision with a migration path, not a tidy-up, and the version to beat is
+// 2026.3.920.
+//
+// Internal, and staying that way: NamedColors, XamlFiles, ResourceKeyScanner, ThemeGraphWalker,
+// ResourceKey, VariantId, WalkResult.
 [assembly: InternalsVisibleTo("ThemeAudit")]
 
 // The test project asserts against the ported analysis directly, exactly as it did before the
