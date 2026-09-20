@@ -1,0 +1,21 @@
+<Project>
+  <PropertyGroup>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <CentralPackageTransitivePinningEnabled>true</CentralPackageTransitivePinningEnabled>
+  </PropertyGroup>
+
+  <ItemGroup Label="Versioning">
+    <PackageVersion Include="Bennewitz.Ninja.AutoVersioning" Version="2026.3.914" />
+  </ItemGroup>
+
+  <ItemGroup Label="Tool">
+    <!-- The CLI face only. ⛔ The rules LIBRARY takes no package reference at all, and that is a
+         contract rather than an accident: a quality analyser that drags dependencies into a
+         consumer's test project is one people stop referencing. -->
+    <PackageVersion Include="System.CommandLine" Version="2.0.0-beta7.25380.108" />
+  </ItemGroup>
+
+  <ItemGroup Label="Testing">
+    <PackageVersion Include="MSTest" Version="4.3.3" />
+  </ItemGroup>
+</Project>

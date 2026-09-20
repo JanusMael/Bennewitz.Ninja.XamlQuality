@@ -1,0 +1,15 @@
+# Normalize line endings to LF in the repository; tools that need CRLF get it on checkout.
+* text=auto eol=lf
+
+*.cs      text
+*.axaml   text
+*.xaml    text
+*.csproj  text
+*.props   text
+*.targets text
+*.slnx    text
+*.json    text
+*.md      text
+*.yml     text
+*.sh      text eol=lf
+*.ps1     text eol=crlf

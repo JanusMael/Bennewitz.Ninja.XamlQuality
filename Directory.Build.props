@@ -1,0 +1,64 @@
+<Project>
+  <PropertyGroup>
+    <TargetFramework>net10.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>preview</LangVersion>
+    <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
+    <ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+    <!-- Absolute repository root for targets that shell out to scripts/. -->
+    <RepoRoot>$(MSBuildThisFileDirectory)</RepoRoot>
+    <!-- Namespace convention: Bennewitz.Ninja.<AssemblyName>; assembly names stay unprefixed. -->
+    <RootNamespace>Bennewitz.Ninja.$(MSBuildProjectName)</RootNamespace>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!-- Bennewitz.Ninja.AutoVersioning source generator: version stamps computed at build time. -->
+    <GenerateAutoVersionedAssemblyInfo>true</GenerateAutoVersionedAssemblyInfo>
+    <AssemblyCompany>Bennewitz.Ninja</AssemblyCompany>
+    <AssemblyProduct>XamlQuality</AssemblyProduct>
+    <CopyrightHolder>Brian Bennewitz</CopyrightHolder>
+    <CommitSha Condition="'$(CommitSha)' == ''">$(GITHUB_SHA)</CommitSha>
+    <IsContinuousIntegration>$(GITHUB_ACTIONS)</IsContinuousIntegration>
+    <!-- AutoVersioning records the released version as assembly metadata; it does not set it. The
+         package version comes from the release tag as /p:Version=, so this follows it and reads
+         1.0.0 on a local build, which is what a local build is. -->
+    <PublicVersion Condition="'$(PublicVersion)' == ''">$(Version)</PublicVersion>
+  </PropertyGroup>
+
+  <!-- Package metadata shared by every packable project. Without a licence expression a package is
+       one nobody's compliance review passes; without Authors it packs as the assembly name; without
+       a repository URL the nuspec carries a commit hash pointing at nothing. PackageTags are
+       per-project and live in the csproj beside the Description. -->
+  <PropertyGroup>
+    <Authors>Brian Bennewitz</Authors>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <PackageProjectUrl>https://github.com/JanusMael/Bennewitz.Ninja.XamlQuality</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/JanusMael/Bennewitz.Ninja.XamlQuality</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PackageReadmeFile>README.md</PackageReadmeFile>
+  </PropertyGroup>
+
+  <!-- PDB policy: portable in Debug for local source stepping; embedded in Release so the
+       shipped binary carries its own symbols and nothing loose has to travel with it. -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'">
+    <DebugType>portable</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>embedded</DebugType>
+    <DebugSymbols>true</DebugSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bennewitz.Ninja.AutoVersioning"
+                      PrivateAssets="all"
+                      IncludeAssets="runtime; build; native; contentfiles; analyzers; buildtransitive" />
+  </ItemGroup>
+
+  <!-- The README travels inside every package, so nuget.org shows the same text the repository
+       does. Packable projects only: a test project with no README is not a packaging error. -->
+  <ItemGroup Condition="'$(IsPackable)' == 'true'">
+    <None Include="$(RepoRoot)README.md" Pack="true" PackagePath="\" Visible="false" />
+  </ItemGroup>
+</Project>

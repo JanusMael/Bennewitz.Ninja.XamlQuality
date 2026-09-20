@@ -1,0 +1,86 @@
+name: Release
+
+# Triggered by a version tag (v1.2.3), or dispatched by hand with an explicit version.
+#
+# ⛔ A PUBLISHED NUGET VERSION CAN NEVER BE REPLACED. Everything this repository otherwise
+# treats as recoverable becomes permanent past the push step, so the gates below — build,
+# test, pack — all run before it, and --skip-duplicate makes a re-run of a completed release
+# a no-op rather than a failure.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'NuGet version (e.g. 1.0.0)'
+        required: true
+
+env:
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: 1
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      # Required for NuGet.org Trusted Publishing (OIDC) — see the NuGet/login step below.
+      # ⭐ This is what replaces a long-lived API key: the token is minted per run and expires,
+      # so there is no secret in this repository that would still be valid if it leaked.
+      id-token: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+
+      # The version comes from the TAG, not from a file, so the tag and the package agree by
+      # construction rather than by someone remembering to bump both.
+      - name: Resolve version and tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
+            echo "TAG=v${{ inputs.version }}" >> $GITHUB_ENV
+          else
+            echo "VERSION=${GITHUB_REF_NAME#v}" >> $GITHUB_ENV
+            echo "TAG=${GITHUB_REF_NAME}" >> $GITHUB_ENV
+          fi
+
+      - name: Build
+        run: dotnet build XamlQuality.slnx -c Release --nologo -warnaserror /p:Version=${{ env.VERSION }}
+
+      - name: Test
+        run: dotnet test --solution XamlQuality.slnx --no-build -c Release
+
+      - name: Pack
+        run: >
+          dotnet pack XamlQuality.slnx -c Release --no-build --nologo
+          /p:Version=${{ env.VERSION }}
+          --output ./packages/Release
+
+      - name: NuGet Login (Trusted Publishing)
+        id: nuget-login
+        uses: NuGet/login@v1
+        with:
+          user: ${{ secrets.NUGET_USER }}
+
+      - name: Push to NuGet.org
+        run: |
+          dotnet nuget push \
+            ./packages/Release/Bennewitz.Ninja.XamlQuality.${{ env.VERSION }}.nupkg \
+            ./packages/Release/Bennewitz.Ninja.XamlQuality.ThemeAudit.${{ env.VERSION }}.nupkg \
+            --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} \
+            --source https://api.nuget.org/v3/index.json \
+            --skip-duplicate
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "${{ env.TAG }}" ./packages/Release/*.nupkg --generate-notes --title "${{ env.TAG }}"

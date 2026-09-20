@@ -1,0 +1,24 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Library</OutputType>
+    <IsPackable>true</IsPackable>
+    <PackageId>Bennewitz.Ninja.XamlQuality</PackageId>
+    <AssemblyName>XamlQuality</AssemblyName>
+    <Description>
+      Static analysis rules for XAML markup quality: accessibility names, theme-token
+      discipline, resource keys a theme leaves undefined, contrast floors, and the
+      conventions a XAML codebase drifts away from silently.
+
+      A RULES library, not a test library. Each rule takes a scan context and returns
+      findings; nothing here references a test framework, so the same rules drive MSTest,
+      xUnit, a CLI or an MSBuild target without inheriting anyone else's runner.
+
+      Dependency-free by design, and that includes Avalonia. Every rule reads markup as
+      text or as XML, so the library is as useful against WPF or MAUI XAML as against
+      Avalonia's — and a quality analyser that drags dependencies into a consumer's test
+      project is one people stop referencing.
+    </Description>
+    <PackageTags>xaml;avalonia;wpf;maui;accessibility;theme;analysis;quality;lint</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+</Project>
