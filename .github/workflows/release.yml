@@ -1,6 +1,6 @@
 name: Release
 
-# Triggered by a version tag (v1.2.3), or dispatched by hand with an explicit version.
+# Triggered by a version tag (v1.2.3), or dispatched by hand.
 #
 # ⛔ A PUBLISHED NUGET VERSION CAN NEVER BE REPLACED. Everything this repository otherwise
 # treats as recoverable becomes permanent past the push step, so the gates below — build,
@@ -11,11 +11,22 @@ on:
   push:
     tags:
       - 'v*.*.*'
+  # Two dispatch modes, decided by whether `version` is filled in:
+  #
+  #   BLANK    credential preflight — logs in to NuGet.org and stops. Proves the trusted-
+  #            publishing policies, the id-token permission and the NUGET_USER secret all line
+  #            up, WITHOUT cutting a release. Run this before the first tag.
+  #   FILLED   a real release, which is the path to use when a tag already exists.
+  #
+  # ⚠ The preflight has to live in THIS workflow rather than one of its own: the OIDC token is
+  # bound to the workflow FILENAME, so a policy naming release.yml would never match a run of
+  # any other file. Every publishing step below is gated on RELEASING, so a preflight cannot
+  # publish by accident.
   workflow_dispatch:
     inputs:
       version:
-        description: 'NuGet version (e.g. 1.0.0)'
-        required: true
+        description: 'Version to release (e.g. 2026.3.920). LEAVE BLANK to only preflight credentials.'
+        required: false
 
 env:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
@@ -32,6 +43,14 @@ jobs:
       # so there is no secret in this repository that would still be valid if it leaked.
       id-token: write
 
+    env:
+      # Trusted publishing carries no secret to leak — this is only the nuget.org profile name
+      # the OIDC token is exchanged against. Read at JOB level so the steps below can test it:
+      # the secrets context is not available in a step's own `if`.
+      NUGET_USER: ${{ secrets.NUGET_USER }}
+      # A tag push is always a release; a dispatch is one only when a version was supplied.
+      RELEASING: ${{ github.event_name == 'push' || inputs.version != '' }}
+
     steps:
       - name: Checkout
         uses: actions/checkout@v7
@@ -44,6 +63,7 @@ jobs:
       # The version comes from the TAG, not from a file, so the tag and the package agree by
       # construction rather than by someone remembering to bump both.
       - name: Resolve version and tag
+        if: env.RELEASING == 'true'
         run: |
           if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
             echo "VERSION=${{ inputs.version }}" >> $GITHUB_ENV
@@ -54,28 +74,59 @@ jobs:
           fi
 
       - name: Build
+        if: env.RELEASING == 'true'
         run: dotnet build XamlQuality.slnx -c Release --nologo -warnaserror /p:Version=${{ env.VERSION }}
 
       - name: Test
+        if: env.RELEASING == 'true'
         run: dotnet test --solution XamlQuality.slnx --no-build -c Release
 
       - name: Pack
+        if: env.RELEASING == 'true'
         run: >
           dotnet pack XamlQuality.slnx -c Release --no-build --nologo
           /p:Version=${{ env.VERSION }}
           --output ./packages/Release
 
+      # Kept immediately before the push: the token this returns is short-lived, and a slow step
+      # in between is how it expires before it is used.
       - name: NuGet Login (Trusted Publishing)
         id: nuget-login
+        if: env.NUGET_USER != ''
         uses: NuGet/login@v1
         with:
           user: ${{ secrets.NUGET_USER }}
+
+      # ⚠ A successful login proves only that AT LEAST ONE policy matched. It cannot prove both
+      # exist, because the exchange is per-account, not per-package — so the ids are printed here
+      # to be checked by eye against https://www.nuget.org/account/trustedpublishing. A missing
+      # second policy is the one failure that leaves the two packages at DIFFERENT versions, and
+      # a published version cannot be replaced.
+      - name: Report the preflight result
+        if: env.RELEASING != 'true'
+        run: |
+          if [ -z "$NUGET_USER" ]; then
+            echo "::error::NUGET_USER is not set, so no publish would happen on a tag."
+            exit 1
+          fi
+          echo "Logged in to NuGet.org as '$NUGET_USER'. Tagging will publish."
+          {
+            echo "### Trusted publishing verified"
+            echo "Logged in as \`$NUGET_USER\`. A \`v*.*.*\` tag will publish these ids:"
+            echo ""
+            echo "- \`Bennewitz.Ninja.XamlQuality\`"
+            echo "- \`Bennewitz.Ninja.XamlQuality.ThemeAudit\`"
+            echo ""
+            echo "⚠ Login proves at least ONE policy matched, not both. Confirm a policy exists"
+            echo "for **each** id above before tagging."
+          } >> "$GITHUB_STEP_SUMMARY"
 
       # ⚠ Packages are named EXPLICITLY, never globbed. A glob publishes whatever happens to be
       # in the folder, and a published version is permanent — so the one time it picks up
       # something unintended is the one time it cannot be undone.
       #
       - name: Push to NuGet.org
+        if: env.RELEASING == 'true' && env.NUGET_USER != ''
         run: |
           dotnet nuget push \
             ./packages/Release/Bennewitz.Ninja.XamlQuality.${{ env.VERSION }}.nupkg \
@@ -85,6 +136,7 @@ jobs:
             --skip-duplicate
 
       - name: Create GitHub Release
+        if: env.RELEASING == 'true'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release create "${{ env.TAG }}" ./packages/Release/*.nupkg --generate-notes --title "${{ env.TAG }}"
