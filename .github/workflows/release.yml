@@ -73,6 +73,17 @@ jobs:
             echo "TAG=${GITHUB_REF_NAME}" >> $GITHUB_ENV
           fi
 
+      # ⛔ Fail LOUDLY rather than publish nothing quietly. Without this, a tag with the secret
+      # unset skips the push (which is gated on NUGET_USER) but still creates the GitHub Release
+      # below — a green run, a release page, and no package. That false green is worse than a
+      # failure, because the next person reads the release as evidence the package shipped.
+      - name: Refuse to release without NUGET_USER
+        if: env.RELEASING == 'true' && env.NUGET_USER == ''
+        run: |
+          echo "::error::NUGET_USER is not set. Refusing to release: the push would be skipped"
+          echo "::error::and a GitHub Release would be created for a package that never shipped."
+          exit 1
+
       - name: Build
         if: env.RELEASING == 'true'
         run: dotnet build XamlQuality.slnx -c Release --nologo -warnaserror /p:Version=${{ env.VERSION }}
@@ -117,8 +128,10 @@ jobs:
             echo "- \`Bennewitz.Ninja.XamlQuality\`"
             echo "- \`Bennewitz.Ninja.XamlQuality.ThemeAudit\`"
             echo ""
-            echo "⚠ Login proves at least ONE policy matched, not both. Confirm a policy exists"
-            echo "for **each** id above before tagging."
+            echo "⚠ Login proves *a* policy matched — never that it covers every id above."
+            echo "Confirm ONE policy whose Glob Patterns cover both, and NOT a policy per id:"
+            echo "one exchange mints one key scoped to one policy, so a second policy is never"
+            echo "consulted and its package is rejected 403 — after the first is already permanent."
           } >> "$GITHUB_STEP_SUMMARY"
 
       # ⚠ Packages are named EXPLICITLY, never globbed. A glob publishes whatever happens to be
