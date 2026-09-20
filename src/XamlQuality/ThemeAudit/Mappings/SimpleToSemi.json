@@ -1,0 +1,46 @@
+{
+  // Simple → Semi. Reviewed rule: the Theme* colours take Semi's grey scale matched on the
+  // Light value (Simple's Dark values do not form a consistent scale of their own, so Dark
+  // follows Semi's inverted scale); the accent family takes Semi's blue ramp; translucent
+  // ramps (ThemeAccentColor2..4, ErrorLowColor) keep Simple's values; the brushes follow by
+  // alias as Simple defines them.
+  "description": "Simple-theme keys absent under Semi, mapped onto Semi's tokens",
+  "variants": {
+    "Default": "Light",
+    "Dark": "Dark"
+  },
+  "keys": {
+    "ThemeBackgroundColor": { "to": "SemiBackground0Color", "why": "the window background" },
+    "ThemeForegroundColor": { "to": "SemiGrey9Color", "why": "primary ink" },
+    "ThemeForegroundLowColor": { "to": "SemiGrey5Color", "why": "#808080 muted ink" },
+    "ThemeBorderLowColor": { "to": "SemiGrey3Color", "why": "#AAAAAA" },
+    "ThemeBorderMidColor": { "to": "SemiGrey4Color", "why": "#888888" },
+    "ThemeBorderHighColor": { "to": "SemiGrey8Color", "why": "#333333" },
+    "ThemeControlLowColor": { "to": "SemiGrey4Color", "why": "#868999" },
+    "ThemeControlMidColor": { "to": "SemiGrey1Color", "why": "#F5F5F5 control face; Grey1 keeps it visible on Semi's white page" },
+    "ThemeControlMidHighColor": { "to": "SemiGrey2Color", "why": "#C2C3C9" },
+    "ThemeControlHighColor": { "to": "SemiGrey5Color", "why": "#686868 / #808080: matches Semi's Grey5 in both variants" },
+    "ThemeControlVeryHighColor": { "to": "SemiGrey6Color", "why": "#5B5B5B" },
+    "ThemeControlHighlightLowColor": { "to": "SemiGrey0Color", "why": "#F0F0F0" },
+    "ThemeControlHighlightMidColor": { "to": "SemiGrey2Color", "why": "#D0D0D0" },
+    "ThemeControlHighlightHighColor": { "to": "SemiGrey4Color", "why": "#808080" },
+    "HighlightColor": { "to": "SemiBlue5Color", "why": "selection/accent; Semi's primary. Semi's high-contrast variants define their own HighlightColor, which the generator restores" },
+    "HighlightColor2": { "to": "SemiBlue6Color", "why": "the darker highlight" },
+    "HighlightForegroundColor": { "to": "SemiWhiteColor", "why": "text on the highlight" },
+    "HyperlinkVisitedColor": { "to": "SemiPurple5Color", "why": "#681DA8 / #C58AF9" },
+    "ErrorColor": { "to": "SemiRed5Color", "why": "Semi's danger" },
+  },
+  "skip": [],
+  "copy": {
+    "namespaces": [
+      "using:System",
+      "clr-namespace:System;assembly=System.Runtime",
+      "using:Avalonia.Controls.Converters",
+      "clr-namespace:Avalonia.Controls.Converters;assembly=Avalonia.Controls",
+    ],
+    "skipElements": [
+      "ControlTheme", "Style", "Styles", "ControlTemplate", "DataTemplate", "ItemsPanelTemplate",
+      "MenuFlyout", "ResourceDictionary", "ResourceInclude", "MergeResourceInclude", "StyleInclude",
+    ],
+  },
+}

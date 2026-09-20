@@ -75,13 +75,11 @@ jobs:
       # in the folder, and a published version is permanent — so the one time it picks up
       # something unintended is the one time it cannot be undone.
       #
-      # ⛔ ADD THE LINE WHEN THE PROJECT LANDS. Bennewitz.Ninja.XamlQuality.ThemeAudit does not
-      # exist yet; naming it here before it packs would fail every release with a missing-file
-      # error, which is a worse failure than the one the explicit list is guarding against.
       - name: Push to NuGet.org
         run: |
           dotnet nuget push \
             ./packages/Release/Bennewitz.Ninja.XamlQuality.${{ env.VERSION }}.nupkg \
+            ./packages/Release/Bennewitz.Ninja.XamlQuality.ThemeAudit.${{ env.VERSION }}.nupkg \
             --api-key ${{ steps.nuget-login.outputs.NUGET_API_KEY }} \
             --source https://api.nuget.org/v3/index.json \
             --skip-duplicate

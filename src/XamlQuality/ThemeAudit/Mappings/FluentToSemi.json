@@ -1,0 +1,54 @@
+{
+  // Fluent → Semi. Reviewed rule: an opaque surface or ink takes Semi's own token so it follows
+  // Semi's palette in every variant; a translucent overlay (the Alt/Base/ChromeBlack/List/
+  // RevealList alpha ramps) keeps Fluent's value, because it is white-or-black-at-alpha and
+  // reads the same over Semi's surfaces; everything else — the SystemControl* brushes, the
+  // control resources — follows by alias, exactly as Fluent defines it.
+  "description": "Fluent-family keys absent under Semi, mapped onto Semi's tokens",
+  "variants": {
+    "Default": "Light",
+    "Dark": "Dark"
+  },
+  "keys": {
+    // Surfaces and inks.
+    "SystemAltHighColor": { "to": "SemiBackground0Color", "why": "the page/alt surface: white in Light, Semi's #16161A in Dark" },
+    "SystemRegionColor": { "to": "SemiBackground0Color", "why": "the window background Fluent's Window template paints" },
+    "SystemBaseHighColor": { "to": "SemiGrey9Color", "why": "primary ink; Semi's own SemiColorText0" },
+    "SystemChromeAltLowColor": { "to": "SemiGrey8Color", "why": "near-black chrome (#171717) in Light, near-white in Dark" },
+    "SystemChromeBlackHighColor": { "to": "SemiBlackColor", "why": "black in both variants" },
+    "SystemChromeWhiteColor": { "to": "SemiWhiteColor", "why": "white in both variants" },
+    "SystemChromeGrayColor": { "to": "SemiGrey5Color", "why": "#767676 in both variants; Semi's mid grey" },
+    "SystemChromeLowColor": { "to": "SemiGrey0Color", "why": "#F2F2F2 / #171717: the lightest chrome tier" },
+    "SystemChromeMediumLowColor": { "to": "SemiGrey0Color", "why": "#F2F2F2 / #2B2B2B: same tier as ChromeLow in Light" },
+    "SystemChromeMediumColor": { "to": "SemiGrey1Color", "why": "#E6E6E6 / #1F1F1F: AvaloniaEdit's search-panel surface" },
+    "SystemChromeHighColor": { "to": "SemiGrey2Color", "why": "#CCCCCC / #767676: matched on the Light value; Dark follows Semi's scale" },
+    "SystemChromeDisabledHighColor": { "to": "SemiGrey2Color", "why": "#CCCCCC / #333333: disabled surface" },
+    "SystemChromeDisabledLowColor": { "to": "SemiGrey4Color", "why": "#7A7A7A / #858585: disabled ink" },
+    "SystemErrorTextColor": { "to": "SemiRed6Color", "why": "error text: darker than Semi's danger tint in Light, readable in Dark" },
+    // Accent and its shades. Fluent derives the shades from the accent by HSL steps; Semi's
+    // primary ramp is Blue5 with Blue6/Blue7 for pointer-over/pressed, so the shades follow it.
+    "SystemAccentColor": { "to": "SemiBlue5Color", "why": "Semi's primary (SemiColorPrimary)" },
+    "SystemAccentColorDark1": { "to": "SemiBlue6Color", "why": "pointer-over accent; Semi's SemiColorPrimaryPointerover" },
+    "SystemAccentColorDark2": { "to": "SemiBlue7Color", "why": "pressed accent; Semi's SemiColorPrimaryActive" },
+    "SystemAccentColorDark3": { "to": "SemiBlue8Color", "why": "next step on Semi's ramp" },
+    "SystemAccentColorLight1": { "to": "SemiBlue4Color", "why": "one step lighter on Semi's ramp" },
+    "SystemAccentColorLight2": { "to": "SemiBlue3Color", "why": "two steps lighter" },
+    "SystemAccentColorLight3": { "to": "SemiBlue2Color", "why": "three steps lighter; Semi's SemiColorPrimaryDisabled" },
+  },
+  "skip": [
+    // Fluent's optional density dictionary, keyed for the host to add or remove; not a resource.
+    "CompactStyles",
+  ],
+  "copy": {
+    "namespaces": [
+      "using:System",
+      "clr-namespace:System;assembly=System.Runtime",
+      "using:Avalonia.Controls.Converters",
+      "clr-namespace:Avalonia.Controls.Converters;assembly=Avalonia.Controls",
+    ],
+    "skipElements": [
+      "ControlTheme", "Style", "Styles", "ControlTemplate", "DataTemplate", "ItemsPanelTemplate",
+      "MenuFlyout", "ResourceDictionary", "ResourceInclude", "MergeResourceInclude", "StyleInclude",
+    ],
+  },
+}

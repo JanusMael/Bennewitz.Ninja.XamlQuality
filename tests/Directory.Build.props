@@ -1,0 +1,29 @@
+<Project>
+  <!-- MSBuild applies only the CLOSEST Directory.Build.props, so the repository root's settings
+       have to be imported explicitly. Without this line every test project silently loses the
+       root's TargetFramework, nullable settings and AutoVersioning reference — and nothing says
+       so, because the defaults it falls back to still compile. -->
+  <Import Project="$([MSBuild]::GetPathOfFileAbove('Directory.Build.props', '$(MSBuildThisFileDirectory)../'))" />
+
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <IsTestProject>true</IsTestProject>
+    <!-- xunit v3 test projects are executables. -->
+    <OutputType>Exe</OutputType>
+    <!-- A test project's own missing XML docs are noise; the rules are the documented surface. -->
+    <NoWarn>$(NoWarn);CS1591</NoWarn>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <!-- xunit v3 runs on Microsoft.Testing.Platform (see global.json); the VSTest bridge packages
+         are deliberately absent. TrxReport gives CI its .trx files. -->
+    <PackageReference Include="xunit.v3" />
+    <PackageReference Include="Microsoft.Testing.Extensions.TrxReport" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- Xunit as a global using, matching the repository these tests were ported from — which is
+         what let fourteen files move without a single edit to their bodies. -->
+    <Using Include="Xunit" />
+  </ItemGroup>
+</Project>

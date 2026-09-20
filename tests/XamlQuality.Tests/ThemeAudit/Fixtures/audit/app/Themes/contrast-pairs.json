@@ -1,0 +1,7 @@
+{
+  "pairs": [
+    { "foreground": "AppOwn", "background": "$Page", "floor": 4.5, "purpose": "app text on the host page" },
+    { "foreground": "AppMarker", "background": "$Page", "floor": 3.0 },
+    { "foreground": "AppOwn", "background": "$Missing", "floor": 4.5 }
+  ]
+}

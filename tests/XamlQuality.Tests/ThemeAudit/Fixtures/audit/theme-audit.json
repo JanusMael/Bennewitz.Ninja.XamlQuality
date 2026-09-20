@@ -1,0 +1,26 @@
+{
+  // The audit fixture: a host theme that omits HostAccent under Dark, a consumer that references
+  // it and a key nothing defines, a token that fails its floor in Dark, and a compat dictionary
+  // that closes the HostAccent gap. Comments and trailing commas are allowed.
+  "title": "Fixture audit",
+  "report": "docs/theme-audit.md",
+  "themes": [
+    {
+      "name": "Host",
+      "entry": "host/Host.axaml",
+      "baseDirectory": "host",
+      "variants": ["Light", "Dark"],
+      "surfaces": { "Page": "HostPage", "Text": "HostText" },
+    },
+    { "name": "Host + compat", "extends": "Host", "merge": ["host/Compat.axaml"] },
+  ],
+  "consumers": [
+    {
+      "name": "App",
+      "paths": [["missing/elsewhere", "app/Themes"]],
+      "tokens": { "entry": "app/Themes/Tokens.axaml" },
+      "contrast": "app/Themes/contrast-pairs.json",
+    },
+    { "name": "Host-only", "paths": ["app/Themes"], "themes": ["Host"] },
+  ],
+}

@@ -1,0 +1,23 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:fx="using:Fixture">
+  <!-- Semi-shaped target: Light, Dark, and a high-contrast Vivid that inherits Dark and defines
+       its own HighlightColor — a name the source also uses. -->
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <Color x:Key="ToInkColor">#1C1F23</Color>
+      <Color x:Key="ToBlueColor">#0064FA</Color>
+      <SolidColorBrush x:Key="ToInk" Color="{StaticResource ToInkColor}" />
+      <Color x:Key="AlreadyThere">#FFFFFF</Color>
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <Color x:Key="ToInkColor">#F9F9F9</Color>
+      <Color x:Key="ToBlueColor">#54A9FF</Color>
+      <SolidColorBrush x:Key="ToInk" Color="{StaticResource ToInkColor}" />
+      <Color x:Key="AlreadyThere">#000000</Color>
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="{x:Static fx:Theme.Vivid}">
+      <Color x:Key="HighlightColor">#D6B4FD</Color>
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

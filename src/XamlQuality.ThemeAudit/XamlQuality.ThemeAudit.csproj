@@ -1,0 +1,36 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>ThemeAudit</AssemblyName>
+    <RollForward>Major</RollForward>
+    <!-- Packed as a dotnet tool: `dotnet tool install Bennewitz.Ninja.XamlQuality.ThemeAudit`
+         → `theme-audit`.
+         ⭐ The COMMAND name is unchanged on purpose. The package id moved into the XamlQuality
+         family when the analysis moved into the XamlQuality library, but `theme-audit` is what
+         scripts, CI steps and documentation already invoke — and ToolCommandName is independent
+         of the package id, so there was no reason to break it. -->
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>theme-audit</ToolCommandName>
+    <PackageId>Bennewitz.Ninja.XamlQuality.ThemeAudit</PackageId>
+    <IsPackable>true</IsPackable>
+    <Description>
+      Command-line face of Bennewitz.Ninja.XamlQuality: audits an Avalonia, WPF or MAUI theme
+      for the resource keys it leaves undefined — the invisible-control cases — and for tokens
+      that fall below a contrast floor, and generates the compat dictionaries that close them.
+
+      Themes in, consumers in, findings out. All analysis lives in the
+      Bennewitz.Ninja.XamlQuality library; this project is argument parsing and reporting, so
+      the same rules are equally available from a test project without shelling out.
+    </Description>
+    <PackageTags>avalonia;wpf;maui;xaml;theme;resources;accessibility;contrast;audit;dotnet-tool</PackageTags>
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XamlQuality\XamlQuality.csproj" />
+  </ItemGroup>
+</Project>

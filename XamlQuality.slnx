@@ -1,6 +1,7 @@
 <Solution>
   <Folder Name="/src/">
     <Project Path="src/XamlQuality/XamlQuality.csproj" />
+    <Project Path="src/XamlQuality.ThemeAudit/XamlQuality.ThemeAudit.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/XamlQuality.Tests/XamlQuality.Tests.csproj" />

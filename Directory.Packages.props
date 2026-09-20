@@ -16,6 +16,16 @@
   </ItemGroup>
 
   <ItemGroup Label="Testing">
-    <PackageVersion Include="MSTest" Version="4.3.3" />
+    <!-- ⚠ xunit.v3 rather than MSTest, and that is a porting decision rather than a preference.
+         The ThemeAudit rules and their fourteen test files came from a repository that uses
+         xunit; matching it let those tests move VERBATIM. Converting them instead would have
+         meant rewriting the one thing that proves the ported analysis still behaves — which is
+         the worst possible file to rewrite during a move.
+         ⓘ The rules library itself references no test framework at all, so this choice binds
+         nobody: a consumer asserts on findings with whatever runner they already use. -->
+    <PackageVersion Include="xunit.v3" Version="3.2.2" />
+    <!-- Same Microsoft.Testing.Platform line as xunit.v3 3.2.2 (1.9.1); a newer TrxReport pins
+         the platform above what xunit's bundled MSBuild extension can load. -->
+    <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="1.9.1" />
   </ItemGroup>
 </Project>

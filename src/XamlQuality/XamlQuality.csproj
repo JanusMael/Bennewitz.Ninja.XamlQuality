@@ -21,4 +21,22 @@
     <PackageTags>xaml;avalonia;wpf;maui;accessibility;theme;analysis;quality;lint</PackageTags>
     <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <!-- The reviewed theme mappings ship beside the assembly, so a configuration can name one
+         without a path ("mapping": "FluentToSemi") and override it with a path of its own.
+         ⚠ They live with the LIBRARY rather than the tool, because the library is what reads
+         them — a test project using the rules directly needs them just as much as the CLI does.
+         PackagePath puts them in contentFiles so they travel to a consumer too. -->
+    <!-- ⚠ Link, because the SOURCE path gained a ThemeAudit/ segment when the analysis moved in
+         here but the RUNTIME path must not: the loader resolves a bare mapping name against
+         "<output>/Mappings", so nesting them in the output turns `"mapping": "FluentToSemi"`
+         into a file-not-found. Source layout and runtime layout are allowed to differ, and this
+         is a case where they have to. -->
+    <None Include="ThemeAudit/Mappings/*.json"
+          Link="Mappings/%(Filename)%(Extension)"
+          CopyToOutputDirectory="PreserveNewest"
+          Pack="true"
+          PackagePath="contentFiles/any/any/Mappings/" />
+  </ItemGroup>
 </Project>

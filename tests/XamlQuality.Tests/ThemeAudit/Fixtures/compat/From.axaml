@@ -1,0 +1,32 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:conv="using:Avalonia.Controls.Converters">
+  <!-- Fluent-shaped source: Default and Dark, palette colours, brushes aliasing them, control
+       resources aliasing the brushes, plus the kinds the generator must decide about. -->
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Default">
+      <Color x:Key="SysInk">#000000</Color>
+      <Color x:Key="SysAlpha">#33000000</Color>
+      <Color x:Key="HighlightColor">#086F9E</Color>
+      <Color x:Key="AlreadyThere">#FF0000</Color>
+      <Color x:Key="BadMap">#123456</Color>
+      <Color x:Key="WrongKind">#654321</Color>
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <Color x:Key="SysInk">#FFFFFF</Color>
+      <Color x:Key="SysAlpha">#33FFFFFF</Color>
+      <Color x:Key="HighlightColor">#119EDA</Color>
+      <Color x:Key="AlreadyThere">#00FF00</Color>
+      <Color x:Key="BadMap">#123456</Color>
+      <Color x:Key="WrongKind">#654321</Color>
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+  <SolidColorBrush x:Key="SysInkBrush" Color="{StaticResource SysInk}" />
+  <StaticResource x:Key="ButtonFg" ResourceKey="SysInkBrush" />
+  <SolidColorBrush x:Key="Ghost" Color="#123456" Opacity="0.5" />
+  <SolidColorBrush x:Key="Dangling" Color="{StaticResource Nope}" />
+  <SolidColorBrush x:Key="DanglingButColour" Color="{StaticResource SysInk}" Opacity="{StaticResource NopeOpacity}" />
+  <Thickness x:Key="Pad">4,2</Thickness>
+  <conv:MarginMultiplierConverter x:Key="Mult" Indent="16" Left="True" />
+  <ControlTheme x:Key="FancyTheme" TargetType="Button" />
+</ResourceDictionary>

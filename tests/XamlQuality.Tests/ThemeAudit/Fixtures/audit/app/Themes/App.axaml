@@ -1,0 +1,9 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- A host key the theme drops under Dark, a key nothing defines (static: throws), and the app's own token. -->
+  <Style Selector="Border.card">
+    <Setter Property="Background" Value="{DynamicResource HostAccent}" />
+    <Setter Property="BorderBrush" Value="{StaticResource NoSuchKey}" />
+    <Setter Property="Foreground" Value="{DynamicResource AppOwn}" />
+  </Style>
+</Styles>

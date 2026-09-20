@@ -1,0 +1,13 @@
+<Styles xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- A control templated for the source theme: every key it reaches for must resolve under the
+       target once the generated dictionary is merged. -->
+  <Style Selector="Button.fromTheme">
+    <Setter Property="Foreground" Value="{DynamicResource ButtonFg}" />
+    <Setter Property="Background" Value="{DynamicResource SysAlpha}" />
+    <Setter Property="BorderBrush" Value="{DynamicResource HighlightColor}" />
+    <Setter Property="Padding" Value="{DynamicResource Pad}" />
+    <Setter Property="Tag" Value="{StaticResource Mult}" />
+    <Setter Property="Opacity" Value="{DynamicResource AccentColor}" />
+  </Style>
+</Styles>

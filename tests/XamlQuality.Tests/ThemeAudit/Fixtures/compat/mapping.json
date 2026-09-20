@@ -1,0 +1,12 @@
+{
+  "description": "fixture mapping",
+  "variants": { "Light": "Light", "Dark": "Dark" },
+  "keys": {
+    "SysInk": { "to": "ToInkColor", "why": "primary ink" },
+    "HighlightColor": "ToBlueColor",
+    "AccentColor": "ToBlueColor",
+    "BadMap": "NoSuchTarget",
+    "WrongKind": "ToInk",
+  },
+  "skip": [],
+}

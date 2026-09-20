@@ -1,0 +1,15 @@
+<ResourceDictionary xmlns="https://github.com/avaloniaui"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+  <!-- Light and Dark with no Default, so a key omitted from Dark is genuinely undefined there. -->
+  <ResourceDictionary.ThemeDictionaries>
+    <ResourceDictionary x:Key="Light">
+      <SolidColorBrush x:Key="HostPage" Color="#FFFFFF" />
+      <SolidColorBrush x:Key="HostText" Color="#1C1F23" />
+      <SolidColorBrush x:Key="HostAccent" Color="#0064FA" />
+    </ResourceDictionary>
+    <ResourceDictionary x:Key="Dark">
+      <SolidColorBrush x:Key="HostPage" Color="#16161A" />
+      <SolidColorBrush x:Key="HostText" Color="#F9F9F9" />
+    </ResourceDictionary>
+  </ResourceDictionary.ThemeDictionaries>
+</ResourceDictionary>

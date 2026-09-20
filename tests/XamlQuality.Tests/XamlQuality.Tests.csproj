@@ -1,17 +1,5 @@
 <Project Sdk="Microsoft.NET.Sdk">
-  <PropertyGroup>
-    <IsPackable>false</IsPackable>
-    <OutputType>Exe</OutputType>
-    <EnableMSTestRunner>true</EnableMSTestRunner>
-    <TestingPlatformDotnetTestSupport>true</TestingPlatformDotnetTestSupport>
-    <!-- The rules are the product; a test project's own missing XML docs are noise. -->
-    <NoWarn>$(NoWarn);CS1591</NoWarn>
-  </PropertyGroup>
-
-  <ItemGroup>
-    <PackageReference Include="MSTest" />
-  </ItemGroup>
-
+  <!-- Framework packages, IsTestProject and OutputType all come from tests/Directory.Build.props. -->
   <ItemGroup>
     <ProjectReference Include="..\..\src\XamlQuality\XamlQuality.csproj" />
   </ItemGroup>
