@@ -48,6 +48,11 @@ package version. A local build reads `1.0.0`, which is what a local build is.
 Publishing uses **NuGet.org Trusted Publishing (OIDC)** — no long-lived API key exists in this
 repository.
 
+## Publishing
+
+See [docs/publishing.md](docs/publishing.md) — one-time trusted-publishing setup, the version rule,
+and what to check after a release.
+
 ## Licence
 
 MIT. See [LICENSE](LICENSE).
