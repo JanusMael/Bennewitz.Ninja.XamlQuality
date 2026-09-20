@@ -33,10 +33,17 @@
          "<output>/Mappings", so nesting them in the output turns `"mapping": "FluentToSemi"`
          into a file-not-found. Source layout and runtime layout are allowed to differ, and this
          is a case where they have to. -->
+    <!-- ⛔ PackageCopyToOutput is what makes them travel; CopyToOutputDirectory does NOT.
+         CopyToOutputDirectory governs THIS build, so the CLI gets them via its ProjectReference
+         and the bare-name lookup works there. A PackageReference consumer got a contentFiles
+         entry with no copyToOutput="true", so nothing landed beside their assembly and
+         `"mapping": "FluentToSemi"` — the form this library's own docs advertise — could only
+         ever be a file-not-found. Shipped that way in 2026.3.920. -->
     <None Include="ThemeAudit/Mappings/*.json"
           Link="Mappings/%(Filename)%(Extension)"
           CopyToOutputDirectory="PreserveNewest"
           Pack="true"
+          PackageCopyToOutput="true"
           PackagePath="contentFiles/any/any/Mappings/" />
   </ItemGroup>
 </Project>
