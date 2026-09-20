@@ -71,10 +71,12 @@ public, so it does not apply here; it explains a policy that silently stops work
 ⭐ **Neither package exists on nuget.org yet, and that is fine.** The `Bennewitz.Ninja.*` prefix
 reservation lets a policy be created for an id that has never been published.
 
-ⓘ **One policy with a pattern, or two policies with exact ids** — both work. The pattern above is
-one policy covering both, which removes the *"one package pushed, the other did not"* failure
-entirely. Two exact-id policies are equally valid and reintroduce it; see the last row of the
-troubleshooting table.
+⛔ **One policy with a pattern is the only shape that works for two ids.** Two exact-id policies do
+**not** work, and the way they fail is expensive: nuget.org mints **one** API key per token
+exchange, scoped to **one** matching policy. Both policies match the same OIDC claims — same owner,
+same repository, same workflow — so it picks one, and the package covered by the other is rejected
+`403` at push. This was proven the hard way on the first `2026.3.920` release: the library pushed
+and became permanent, the tool was forbidden in the same command.
 
 ### 3 · Preflight the credentials
 
@@ -85,11 +87,11 @@ pushed, so this is safe to run as often as you like — it proves the policy, th
 permission and the `NUGET_USER` secret all line up, at the one moment when finding out is still
 free.
 
-⚠ **A green preflight proves at least ONE policy matched, not that every id is covered.** The token
-is exchanged per account, not per package, so a login succeeds with only one of two exact-id
-policies in place. The run summary prints both ids for exactly this reason: check each one against
-the policy list before tagging. A missing second policy is the only failure that leaves the two
-packages at **different versions**, and the recovery is to wait for tomorrow.
+⚠ **A green preflight proves the login works, not that every id is covered.** The exchange returns
+one key scoped to one policy, so it succeeds long before any package id is considered. The run
+summary prints both ids for exactly this reason: confirm a **single** policy whose pattern covers
+both, rather than a policy per id. Nothing in a preflight can catch a coverage gap — only the push
+can, and by then half the release is permanent.
 
 ---
 
@@ -176,7 +178,13 @@ either dispatch the workflow by hand or cut the next day's version.
 | **Token expired** | More than an hour between login and push | The two steps are adjacent here; suspect a stalled build |
 | `already_exists` | Re-running a completed release | Expected — `--skip-duplicate` makes it a no-op |
 | GitHub Release **422** | A release already exists for that tag | Delete the conflicting release, then re-run |
-| One package pushed, the other did not | Two exact-id policies were used and only one was created | Add the missing policy, or widen one to the `Bennewitz.Ninja.XamlQuality*` pattern; re-run — `--skip-duplicate` skips the one already live |
+| One package pushed, the other **403** | A policy per id: one exchange mints one key scoped to one policy | Replace both with a single policy patterned `Bennewitz.Ninja.XamlQuality*`, then `gh run rerun` — `--skip-duplicate` no-ops the one already live and the other pushes at the same version |
+
+⚠ **The `403` row is the one worth expecting**, because it is the only failure that leaves the two
+packages at different versions. It is survivable only because the tag can be replayed: `gh run
+rerun` re-reads the same commit, `--skip-duplicate` makes the live package a no-op, and the rejected
+one goes up at the same version. Fix the policy first — a rerun against an unchanged policy fails
+identically.
 
 ### Working the 401
 
@@ -188,8 +196,11 @@ and re-run the step 3 preflight after each, which costs nothing:
 2. **The policy owner is the individual account**, not an organization.
 3. **The scope allows publishing new packages** — see the ⛔ in step 2. Until the first release
    lands, every id here is a new package.
-4. **The pattern covers the id**, or an exact-id policy exists for each of the two.
+4. **A single policy's pattern covers every id** — never one policy per id; see the ⛔ in step 2.
 5. **The policy is not showing a pending or inactive warning** in the UI.
+
+ⓘ **In practice it was the first one.** The `NUGET_USER` secret predated the policies, so nothing
+had ever validated it; setting it to the profile name turned the 401 green on the next preflight.
 
 ⚠ **The preflight cannot distinguish these for you.** nuget.org returns the same message whichever
 one is wrong: it reports that no policy matched, never which field failed to match. Changing one
