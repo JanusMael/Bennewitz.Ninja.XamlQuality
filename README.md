@@ -35,10 +35,17 @@ people stop referencing.
 
 ## Rules
 
+<!-- BEGIN GENERATED RULES -->
 | Id | Requires |
 |---|---|
-| `XQ1001` | Every `Expander` declares `AutomationProperties.Name` |
-| `XQ1002` | Every interactive control declares `AutomationProperties.Name` |
+| `XQ1001` | Every Expander declares AutomationProperties.Name. |
+| `XQ1002` | Every interactive control declares AutomationProperties.Name. |
+<!-- END GENERATED RULES -->
+
+The table above is rendered from the rule types — `Id` and `Summary` on each `IXamlRule` — and a
+test fails if it drifts. Regenerate it with `XQ_UPDATE_DOCS=1 dotnet test --solution
+XamlQuality.slnx` and commit the result. Everything below the markers is written by hand, because
+none of it is a property of any single rule.
 
 **Run both.** `XQ1002` deliberately leaves `Expander` out of its element set, because both rules
 firing on one element would report a single defect twice. So `XQ1002` alone is not a superset:
