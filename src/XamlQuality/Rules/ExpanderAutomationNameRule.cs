@@ -29,9 +29,6 @@ namespace Bennewitz.Ninja.XamlQuality.Rules;
 /// </remarks>
 public sealed class ExpanderAutomationNameRule : IXamlRule
 {
-    /// <summary>The attached property an Expander must set.</summary>
-    private const string AutomationNameAttribute = "AutomationProperties.Name";
-
     /// <inheritdoc />
     public string Id => "XQ1001";
 
@@ -60,7 +57,7 @@ public sealed class ExpanderAutomationNameRule : IXamlRule
 
                 inspected++;
 
-                if (HasAutomationName(element)) { continue; }
+                if (AutomationName.IsDeclaredOn(element)) { continue; }
 
                 int? line = (element as IXmlLineInfo).HasLineInfo()
                     ? ((IXmlLineInfo)element).LineNumber
@@ -80,38 +77,4 @@ public sealed class ExpanderAutomationNameRule : IXamlRule
         return new XamlRuleResult(findings, inspected);
     }
 
-    /// <summary>
-    /// Whether the element sets the automation name in any spelling markup allows.
-    /// </summary>
-    /// <remarks>
-    /// ⚠ <b>Two spellings, and checking one is how a rule quietly passes.</b> An attached property
-    /// is written either as an attribute (<c>AutomationProperties.Name="…"</c>) or as a property
-    /// ELEMENT (<c>&lt;AutomationProperties.Name&gt;…&lt;/&gt;</c>). The attribute form is far more
-    /// common, which is exactly why the element form is the one that goes unhandled.
-    /// </remarks>
-    private static bool HasAutomationName(XElement element)
-    {
-        foreach (XAttribute attribute in element.Attributes())
-        {
-            if (attribute.Name.LocalName.EndsWith("Name", StringComparison.Ordinal)
-                && attribute.Name.LocalName.Contains("AutomationProperties", StringComparison.Ordinal)
-                && !string.IsNullOrWhiteSpace(attribute.Value))
-            {
-                return true;
-            }
-        }
-
-        // XName.LocalName for a property element is "Expander.AutomationProperties" style in some
-        // dialects and "AutomationProperties.Name" in others, so match on the suffix rather than
-        // on an exact string.
-        foreach (XElement child in element.Elements())
-        {
-            if (child.Name.LocalName.EndsWith(AutomationNameAttribute, StringComparison.Ordinal))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
 }
