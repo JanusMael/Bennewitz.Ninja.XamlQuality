@@ -38,6 +38,17 @@ people stop referencing.
 | Id | Requires |
 |---|---|
 | `XQ1001` | Every `Expander` declares `AutomationProperties.Name` |
+| `XQ1002` | Every interactive control declares `AutomationProperties.Name` |
+
+**Run both.** `XQ1002` deliberately leaves `Expander` out of its element set, because both rules
+firing on one element would report a single defect twice. So `XQ1002` alone is not a superset:
+adopt it on its own and Expanders go unchecked — which is the failure this library exists to
+catch, a gate that reads as comprehensive and is not.
+
+`XQ1002` covers a curated framework set, not every focusable type in any one framework. Pass your
+own control names to the constructor — a control you wrote is exactly the one no framework list
+will ever name, and leaving it out means the rule reports clean over the markup least likely to
+have been reviewed. Assert on `Inspected` to tell that apart from a clean result.
 
 ## Versioning
 
