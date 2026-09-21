@@ -14,7 +14,7 @@ on:
   # Two dispatch modes, decided by whether `version` is filled in:
   #
   #   BLANK    credential preflight — logs in to NuGet.org and stops. Proves the trusted-
-  #            publishing policies, the id-token permission and the NUGET_USER secret all line
+  #            publishing policies, the id-token permission and the NUGET_USER variable all line
   #            up, WITHOUT cutting a release. Run this before the first tag.
   #   FILLED   a real release, which is the path to use when a tag already exists.
   #
@@ -45,9 +45,20 @@ jobs:
 
     env:
       # Trusted publishing carries no secret to leak — this is only the nuget.org profile name
-      # the OIDC token is exchanged against. Read at JOB level so the steps below can test it:
-      # the secrets context is not available in a step's own `if`.
-      NUGET_USER: ${{ secrets.NUGET_USER }}
+      # the OIDC token is exchanged against, and a profile name is public.
+      #
+      # ⛔ Storing it as a secret actively costs you the one thing you need when it is wrong.
+      # GitHub masks a secret in logs, so a bad value turns nuget.org's already-ambiguous 401 into
+      #     No matching trust policy owned by user '***' was found
+      # which hides whether the value was a username, an email, or — the natural mistake, given
+      # the push below takes --api-key — an API key. That masking cost six blind preflight runs on
+      # 2026-09-21 in a sibling repository before the value was simply read out loud. As a
+      # variable the error names it. Set it with:
+      #     gh variable set NUGET_USER --body <your-nuget.org-profile-name>
+      #
+      # Read at JOB level so the steps below can test it. (A secret could not be tested in a
+      # step's own `if` at all; a variable can, but the job-level read keeps one home for it.)
+      NUGET_USER: ${{ vars.NUGET_USER }}
       # A tag push is always a release; a dispatch is one only when a version was supplied.
       RELEASING: ${{ github.event_name == 'push' || inputs.version != '' }}
 
@@ -73,7 +84,7 @@ jobs:
             echo "TAG=${GITHUB_REF_NAME}" >> $GITHUB_ENV
           fi
 
-      # ⛔ Fail LOUDLY rather than publish nothing quietly. Without this, a tag with the secret
+      # ⛔ Fail LOUDLY rather than publish nothing quietly. Without this, a tag with the variable
       # unset skips the push (which is gated on NUGET_USER) but still creates the GitHub Release
       # below — a green run, a release page, and no package. That false green is worse than a
       # failure, because the next person reads the release as evidence the package shipped.
@@ -106,7 +117,7 @@ jobs:
         if: env.NUGET_USER != ''
         uses: NuGet/login@v1
         with:
-          user: ${{ secrets.NUGET_USER }}
+          user: ${{ vars.NUGET_USER }}
 
       # ⚠ A successful login proves only that AT LEAST ONE policy matched. It cannot prove both
       # exist, because the exchange is per-account, not per-package — so the ids are printed here

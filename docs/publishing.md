@@ -17,16 +17,21 @@ Two packages ship together from one tag:
 
 Steps 1 and 2 are account-level and have to be done by the nuget.org account owner.
 
-### 1 · Add the `NUGET_USER` secret
+### 1 · Add the `NUGET_USER` variable
 
 ```bash
-gh secret set NUGET_USER --repo JanusMael/Bennewitz.Ninja.XamlQuality
+gh variable set NUGET_USER --body <your-nuget.org-profile-name> --repo JanusMael/Bennewitz.Ninja.XamlQuality
 ```
 
-It prompts for the value, so it stays out of shell history.
+⛔ **A variable, never a secret.** A profile name is public, so there is nothing to protect — and
+masking it costs you the only fact that diagnoses a failed login. A bad value turns nuget.org's
+already-ambiguous 401 into `No matching trust policy owned by user '***' was found`, which hides
+whether you stored a username, an email, or an API key. That masking cost six blind preflight runs
+in a sibling repository on 2026-09-21. As a variable, the error names the value and
+`gh variable get NUGET_USER` reads it back.
 
 ⛔ **The value is the nuget.org PROFILE NAME, not an email address.** An email is accepted by the
-secret store and then fails at login, where the error points at the policy rather than at the value.
+variable store and then fails at login, where the error points at the policy rather than at the value.
 
 ⛔ **It is the profile name of whoever CREATED the policy**, which is not always whoever owns the
 package. The two differ whenever a policy is created under an organization, and the failure reads as
@@ -84,7 +89,7 @@ and became permanent, the tool was forbidden in the same command.
 
 A blank version means the workflow logs in to NuGet.org and stops. Nothing is built and nothing is
 pushed, so this is safe to run as often as you like — it proves the policy, the `id-token`
-permission and the `NUGET_USER` secret all line up, at the one moment when finding out is still
+permission and the `NUGET_USER` variable all line up, at the one moment when finding out is still
 free.
 
 ⚠ **A green preflight proves the login works, not that every id is covered.** The exchange returns
@@ -191,16 +196,17 @@ identically.
 The message is identical whichever of these is wrong, so check them in this order — cheapest first,
 and re-run the step 3 preflight after each, which costs nothing:
 
-1. **`NUGET_USER` is the profile name**, not an email, and it is the name of the account that
-   **created** the policy.
+1. **Read `NUGET_USER` out loud before anything else.** `gh variable get NUGET_USER`. It is the
+   profile name, not an email, and it is the name of the account that **created** the policy.
 2. **The policy owner is the individual account**, not an organization.
 3. **The scope allows publishing new packages** — see the ⛔ in step 2. Until the first release
    lands, every id here is a new package.
 4. **A single policy's pattern covers every id** — never one policy per id; see the ⛔ in step 2.
 5. **The policy is not showing a pending or inactive warning** in the UI.
 
-ⓘ **In practice it was the first one.** The `NUGET_USER` secret predated the policies, so nothing
-had ever validated it; setting it to the profile name turned the 401 green on the next preflight.
+ⓘ **In practice it was the first one.** `NUGET_USER` predated the policies, so nothing had ever
+validated it; setting it to the profile name turned the 401 green on the next preflight. It was a
+**secret** at the time, which is why reading it took six runs instead of one command.
 
 ⚠ **The preflight cannot distinguish these for you.** nuget.org returns the same message whichever
 one is wrong: it reports that no policy matched, never which field failed to match. Changing one
