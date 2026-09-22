@@ -127,7 +127,7 @@ public static class AuditRunner
                 kv => (IReadOnlyDictionary<string, string>)kv.Value,
                 StringComparer.Ordinal));
 
-        return new ThemeTarget(theme, inventory, variants, surfaces, Digest(config.ConfigDirectory, inventory.Files));
+        return new ThemeTarget(theme, inventory, variants, surfaces, Digest(CommonRoot(inventory.Files, config.ConfigDirectory), inventory.Files));
     }
 
     private static ThemeSource TokensSource(AuditConfig config, TokensConfig tokens, ThemeConfig theme)
@@ -173,7 +173,56 @@ public static class AuditRunner
             ? ContrastPairsFile.Load(config.Resolve(pairsPath))
             : [];
 
-        return new ConsumerScan(consumer, files, references, own, pairs, Digest(config.ConfigDirectory, files));
+        return new ConsumerScan(consumer, files, references, own, pairs, Digest(CommonRoot(files, config.ConfigDirectory), files));
+    }
+
+
+    /// <summary>
+    /// The deepest directory every one of <paramref name="files"/> sits under.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⭐ <b>The digest must describe WHAT was audited, never WHERE it is checked out.</b> Rooting
+    /// it at the configuration's own directory breaks that the moment a scanned path leaves the
+    /// tree: the same bytes hash differently depending on whether a dependency was found as a
+    /// sibling checkout or under a fetched reference directory. Measured — one project's audit
+    /// produced <c>0ef898b7243a</c> on a developer machine and <c>f95218bc267e</c> in CI from 43
+    /// byte-identical files, and the only difference was <c>../cl/Thing/src</c> against
+    /// <c>reference/Thing/src</c>. It could never have passed in both places.
+    /// </para>
+    /// <para>
+    /// ⚠ <b>Rebasing the root changes every digest once.</b> Committed reports must be regenerated
+    /// after this, and that is the intended cost: the old values encoded a machine's directory
+    /// layout, so they were never comparable across machines in the first place.
+    /// </para>
+    /// </remarks>
+    /// <param name="files">The files whose shared directory is wanted.</param>
+    /// <param name="fallback">Used when the set is empty or shares no directory — nothing to be
+    /// relative to, and inventing one would be worse than saying so.</param>
+    internal static string CommonRoot(IReadOnlyList<string> files, string fallback)
+    {
+        if (files.Count == 0)
+        {
+            return fallback;
+        }
+
+        string[] first = Path.GetFullPath(files[0]).Split(Path.DirectorySeparatorChar);
+        int shared = first.Length - 1;
+
+        foreach (string file in files.Skip(1))
+        {
+            string[] parts = Path.GetFullPath(file).Split(Path.DirectorySeparatorChar);
+            int limit = Math.Min(shared, parts.Length - 1);
+            int i = 0;
+            while (i < limit && string.Equals(first[i], parts[i], StringComparison.Ordinal))
+            {
+                i++;
+            }
+
+            shared = i;
+        }
+
+        return shared <= 0 ? fallback : string.Join(Path.DirectorySeparatorChar, first.Take(shared));
     }
 
     /// <summary>
