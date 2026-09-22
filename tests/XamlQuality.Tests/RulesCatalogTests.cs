@@ -66,6 +66,7 @@ public sealed class RulesCatalogTests
 
         Assert.Contains(rules, rule => rule.Id == "XQ1001");
         Assert.Contains(rules, rule => rule.Id == "XQ1002");
+        Assert.Contains(rules, rule => rule.Id == "XQ1003");
     }
 
     /// <summary>
