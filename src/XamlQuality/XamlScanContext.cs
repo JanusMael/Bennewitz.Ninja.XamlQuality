@@ -1,3 +1,4 @@
+using System.Reflection;
 namespace Bennewitz.Ninja.XamlQuality;
 
 /// <summary>The markup a scan covers.</summary>
@@ -22,10 +23,11 @@ public sealed class XamlScanContext
     /// </remarks>
     public static IReadOnlyList<string> MarkupExtensions { get; } = [".axaml", ".xaml"];
 
-    private XamlScanContext(string root, IReadOnlyList<XamlFile> files)
+    private XamlScanContext(string root, IReadOnlyList<XamlFile> files, IReadOnlyList<Assembly> assemblies)
     {
         Root = root;
         Files = files;
+        Assemblies = assemblies;
     }
 
     /// <summary>The directory the scan was rooted at; <see cref="XamlFile.RelativePath"/> is relative to it.</summary>
@@ -41,6 +43,36 @@ public sealed class XamlScanContext
     /// they are clean.
     /// </summary>
     public IEnumerable<XamlFile> ParsedFiles => Files.Where(f => f.Document is not null);
+
+    /// <summary>
+    /// Assemblies whose compiled types the scan may consult; empty unless a consumer supplies them.
+    /// </summary>
+    /// <remarks>
+    /// <para>
+    /// ⭐ <b>Some contracts have two halves and only one of them is markup.</b> A control looks up
+    /// its template parts by name in code and a theme declares them in markup; neither half alone
+    /// says whether they agree. A rule that reads only markup cannot see the question, and one that
+    /// reads only types cannot see the answer.
+    /// </para>
+    /// <para>
+    /// ⚠ <b>Still no framework dependency.</b> These are whatever assemblies the consumer hands
+    /// over, read through <see cref="System.Reflection"/> — nothing here knows what Avalonia, WPF or
+    /// MAUI is, and a rule that needs types and is given none must report zero <c>Inspected</c>
+    /// rather than zero findings.
+    /// </para>
+    /// </remarks>
+    public IReadOnlyList<Assembly> Assemblies { get; } = [];
+
+    /// <summary>The same scan, with <paramref name="assemblies"/> available to rules that need types.</summary>
+    /// <remarks>
+    /// Returns a new context rather than mutating this one: a scan handed to two rules must not
+    /// change under the second because the first asked for something.
+    /// </remarks>
+    public XamlScanContext WithAssemblies(params Assembly[] assemblies)
+    {
+        ArgumentNullException.ThrowIfNull(assemblies);
+        return new XamlScanContext(Root, Files, [.. assemblies]);
+    }
 
     /// <summary>Read every markup file under <paramref name="root"/>.</summary>
     /// <param name="root">Directory to scan, recursively.</param>
@@ -90,6 +122,6 @@ public sealed class XamlScanContext
         // reports unreadable, and makes a baseline file churn for no reason.
         files.Sort(static (a, b) => string.CompareOrdinal(a.RelativePath, b.RelativePath));
 
-        return new XamlScanContext(full, files);
+        return new XamlScanContext(full, files, []);
     }
 }
