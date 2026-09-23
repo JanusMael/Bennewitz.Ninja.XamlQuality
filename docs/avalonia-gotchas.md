@@ -462,7 +462,19 @@ Measured with the same binding in place both ways: **0 command executions focusi
 
 ⚠ `Focus()` returning `false` is the only signal, and almost nobody checks the return of `Focus()`.
 
-⭐ **Candidate rule, and the blocker named here previously has dissolved:** flag a `KeyBindings` block on a control that is not focusable. Note the condition is the **inverse** of the obvious one — searching for `Focusable="False"` in a `ControlTheme` would never fire, because nobody writes it. Which types are focusable is answerable from `FocusableProperty.GetMetadata(type)`, reflected by name over `XamlScanContext.Assemblies` exactly as `XQ1003` reflects over them today, so the library stays framework-neutral and no theme resolution is needed. ⛔ Read the entry below first — the obvious way to ask that question returns the wrong answer for every type.
+⚠ **A theme on the ITEM CONTAINER kills the same chord, and the symptom is identical.** An `ItemContainerTheme` with one `Focusable="False"` setter on `ListBoxItem` leaves focus unable to land anywhere inside the list, so a binding on the *list* never routes. Measured, one `ListBox` with `Ctrl+C` bound on the host, the container theme the only variable: item `Focusable` `True`→`False`, `item.Focus()` `True`→`False`, chord **1 run → 0 runs**. ⛔ And `SelectedIndex = 0` still works either way, so rows still highlight and nothing throws — a list that looks entirely normal with a dead shortcut.
+
+⭐ **Candidate rule.** The condition is the **inverse** of the obvious one: flag a `KeyBindings` block on a control where nothing in the focus path can take focus. Searching for `Focusable="False"` in a `ControlTheme` would never fire, because nobody writes it.
+
+The two cases fold into one condition at runtime but **not statically**, and they cost differently:
+
+| Case | What it takes |
+|---|---|
+| The host is unfocusable (`ListBox`, `ItemsControl`, `TreeView`) | `FocusableProperty.GetMetadata(type)`, reflected **by name** over `XamlScanContext.Assemblies` as `XQ1003` already does — framework-neutral, no theme resolution |
+| `ItemContainerTheme` on that host sets the container unfocusable | Local: the theme is a property of the element already being examined |
+| A keyless `ControlTheme` for the container sitting in scope | Real theme resolution — which controls an implicit theme actually reaches |
+
+⭐ **The first two are worth having on their own.** They catch the two arrangements measured here and can say honestly what they do not cover; the third can come later or never. ⛔ Read the entry below before implementing the first — the obvious way to ask which types are focusable returns the wrong answer, and the obvious way to *check* that answer is itself unreliable.
 
 ### `AvaloniaProperty` metadata reads its BASE default until the type's static constructor has run
 
@@ -487,7 +499,18 @@ Measured on Avalonia 12.1.0, same process, same types, the only difference being
 | `ListBox` | `False` | `False` |
 | `TreeView` | `False` | `False` |
 
-⭐ **The cold column is uniform, and that is the tell.** A property whose default never varies by type is not worth overriding, so a sweep returning one value for everything has almost certainly measured the registration rather than the type. ⚠ It fails toward a *confident* wrong answer rather than an error, which is what makes it expensive: the conclusion "the property system cannot tell you this, so go read the theme assembly" follows perfectly from it and sends you somewhere much harder for no reason.
+⭐ **A uniform cold column is the tell** — a property whose default never varies by type is not worth overriding, so a sweep returning one value for everything has almost certainly measured the registration rather than the type. ⚠ It fails toward a *confident* wrong answer rather than an error, which is what makes it expensive: the conclusion "the property system cannot tell you this, so go read the theme assembly" follows perfectly from it and sends you somewhere much harder for no reason.
+
+⛔ **But the tell only works on a sweep that is genuinely cold throughout, and an interleaved one is not.** Forcing a constructor registers the override on the type that declares it, and every descendant then **inherits** it — so a later type in the same hierarchy reads the correct value without its own constructor having run. Measured, forcing only the ancestor:
+
+| Read | `CheckBox` |
+|---|---|
+| nothing forced anywhere | `False` |
+| after **`Button`**'s cctor only | **`True`** |
+| after `ToggleButton`'s cctor | `True` |
+| after `CheckBox`'s own cctor | `True` |
+
+⭐ **So a partially correct column is the more dangerous shape, and it is the one an ordinary loop produces.** Read-then-force per type and everything before the first `Button` is wrong while everything after it is right, which looks like real per-type data and defeats the uniformity check. Read **every** value before forcing anything, or force everything before reading any.
 
 ### A `ContextMenu` inherits its target's `DataContext`, and `ContextRequested` BUBBLES
 
