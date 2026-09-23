@@ -448,26 +448,46 @@ The `/template/` combinator is not optional — a selector without it does not r
 
 ⭐ **Related:** `CopyFromScreen` captures the **physical screen**, so screenshotting a background window silently yields whatever is on top of it — for one run here, the editor that launched the harness. Force the window foreground first (`ShowWindow` + `SetWindowPos` topmost + `SetForegroundWindow`) or treat the UIA dump, not the image, as the evidence.
 
-### A `ControlTheme` can leave `Focusable="False"` on a `ListBox`, and then `Focus()` is a silent no-op
+### A `ListBox` is NOT focusable, so `Focus()` on one is a silent no-op
 
 **Symptom:** A `KeyBinding` on a list never fires. The chord reads as unbound — no exception, no log line, nothing in the binding diagnostics.
 
-**Cause:** The `ControlTheme` applied to the `ListBox` sets `Focusable="False"`. `ListBox.Focus()` then returns `false` and focuses nothing, so the key is raised on the window with no row anywhere in its route. There is no route, so there is no handler, so the binding looks absent.
+**Cause:** `ListBox` is not focusable, and neither is `ItemsControl` or `TreeView`. `ListBox.Focus()` returns `false` and focuses nothing, so the key is raised on the window with no row anywhere in its route. No route, no handler, so a binding that is present reads as absent.
 
 **Fix:** Focus the `ListBoxItem`, not the `ListBox` — which is also what a click does, so the keyboard path and the mouse path finally agree.
 
 Measured with the same binding in place both ways: **0 command executions focusing the list, 1 focusing the item.**
 
-```xml
-<!-- The theme that causes it -->
-<ControlTheme x:Key="LinesListBoxTheme" TargetType="ListBox">
-    <Setter Property="Focusable" Value="False" />
-</ControlTheme>
-```
+⛔ **This is not a theme's doing, and it is worth saying because the opposite is the natural guess.** A stock `ListBox` is unfocusable with no `ControlTheme` of yours anywhere near it, and `Focusable` need not appear in your AXAML at all. Reaching for the theme is a dead end.
 
 ⚠ `Focus()` returning `false` is the only signal, and almost nobody checks the return of `Focus()`.
 
-⭐ **Candidate rule, not yet written:** a `ControlTheme` targeting `ListBox`/`ItemsControl` that sets `Focusable="False"` while that control — or its item container — carries `KeyBindings`. Both halves are markup, so a scan can see them; they usually sit in different files, which `XamlScanContext` already accommodates, since every rule receives the whole file set and `XQ1003` correlates markup against compiled assemblies. The open question is matching a theme to the controls it actually applies to: an `x:Key`'d theme reaches only what references it, while a keyless one reaches every control of that type in scope.
+⭐ **Candidate rule, and the blocker named here previously has dissolved:** flag a `KeyBindings` block on a control that is not focusable. Note the condition is the **inverse** of the obvious one — searching for `Focusable="False"` in a `ControlTheme` would never fire, because nobody writes it. Which types are focusable is answerable from `FocusableProperty.GetMetadata(type)`, reflected by name over `XamlScanContext.Assemblies` exactly as `XQ1003` reflects over them today, so the library stays framework-neutral and no theme resolution is needed. ⛔ Read the entry below first — the obvious way to ask that question returns the wrong answer for every type.
+
+### `AvaloniaProperty` metadata reads its BASE default until the type's static constructor has run
+
+**Symptom:** A reflection sweep reports `Focusable` defaults to `false` for every control — `Button`, `TextBox`, `ComboBox`, `MenuItem`, all of them — which would mean nothing in Avalonia is focusable.
+
+**Cause:** The per-type default is registered by `OverrideDefaultValue<T>` inside each type's **static constructor**. Loading an assembly and reflecting over its types does not run those, so `GetMetadata(type)` hands back the base default registered on `InputElement`, which is `false`. The answer is well-formed, plausible, and wrong.
+
+**Fix:** Force the static constructor before asking.
+
+```csharp
+RuntimeHelpers.RunClassConstructor(type.TypeHandle);
+object? meta = InputElement.FocusableProperty.GetMetadata(type);
+```
+
+Measured on Avalonia 12.1.0, same process, same types, the only difference being whether the constructor had run:
+
+| Type | cold | after cctor |
+|---|---|---|
+| `Button` | `False` | **`True`** |
+| `TextBox` | `False` | **`True`** |
+| `ListBoxItem` | `False` | **`True`** |
+| `ListBox` | `False` | `False` |
+| `TreeView` | `False` | `False` |
+
+⭐ **The cold column is uniform, and that is the tell.** A property whose default never varies by type is not worth overriding, so a sweep returning one value for everything has almost certainly measured the registration rather than the type. ⚠ It fails toward a *confident* wrong answer rather than an error, which is what makes it expensive: the conclusion "the property system cannot tell you this, so go read the theme assembly" follows perfectly from it and sends you somewhere much harder for no reason.
 
 ### A `ContextMenu` inherits its target's `DataContext`, and `ContextRequested` BUBBLES
 
