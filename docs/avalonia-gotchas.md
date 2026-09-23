@@ -474,7 +474,7 @@ The two cases fold into one condition at runtime but **not statically**, and the
 | `ItemContainerTheme` on that host sets the container unfocusable | Local: the theme is a property of the element already being examined |
 | A keyless `ControlTheme` for the container sitting in scope | Real theme resolution — which controls an implicit theme actually reaches |
 
-⭐ **The first two are worth having on their own.** They catch the two arrangements measured here and can say honestly what they do not cover; the third can come later or never. ⛔ Read the entry below before implementing the first — the obvious way to ask which types are focusable returns the wrong answer, and the obvious way to *check* that answer is itself unreliable.
+⭐ **All three are in scope**, decided 2026-09-23. The first two catch every arrangement measured so far and could ship alone; the third is included because a rule that is silent on implicit themes would be silent on the commonest way a theme reaches a control. ⚠ The third's prerequisite is unmeasured — how an implicit `ControlTheme`'s reach is actually determined — so it is the part that can stall, and it should not hold the first two back if it does. ⛔ Read the entry below before implementing the first: the obvious way to ask which types are focusable returns the wrong answer, and the obvious way to *check* that answer is itself unreliable.
 
 ### `AvaloniaProperty` metadata reads its BASE default until the type's static constructor has run
 
