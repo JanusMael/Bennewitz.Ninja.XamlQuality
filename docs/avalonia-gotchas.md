@@ -448,6 +448,52 @@ The `/template/` combinator is not optional — a selector without it does not r
 
 ⭐ **Related:** `CopyFromScreen` captures the **physical screen**, so screenshotting a background window silently yields whatever is on top of it — for one run here, the editor that launched the harness. Force the window foreground first (`ShowWindow` + `SetWindowPos` topmost + `SetForegroundWindow`) or treat the UIA dump, not the image, as the evidence.
 
+### A `ControlTheme` can leave `Focusable="False"` on a `ListBox`, and then `Focus()` is a silent no-op
+
+**Symptom:** A `KeyBinding` on a list never fires. The chord reads as unbound — no exception, no log line, nothing in the binding diagnostics.
+
+**Cause:** The `ControlTheme` applied to the `ListBox` sets `Focusable="False"`. `ListBox.Focus()` then returns `false` and focuses nothing, so the key is raised on the window with no row anywhere in its route. There is no route, so there is no handler, so the binding looks absent.
+
+**Fix:** Focus the `ListBoxItem`, not the `ListBox` — which is also what a click does, so the keyboard path and the mouse path finally agree.
+
+Measured with the same binding in place both ways: **0 command executions focusing the list, 1 focusing the item.**
+
+```xml
+<!-- The theme that causes it -->
+<ControlTheme x:Key="LinesListBoxTheme" TargetType="ListBox">
+    <Setter Property="Focusable" Value="False" />
+</ControlTheme>
+```
+
+⚠ `Focus()` returning `false` is the only signal, and almost nobody checks the return of `Focus()`.
+
+⭐ **Candidate rule, not yet written:** a `ControlTheme` targeting `ListBox`/`ItemsControl` that sets `Focusable="False"` while that control — or its item container — carries `KeyBindings`. Both halves are markup, so a scan can see them; they usually sit in different files, which `XamlScanContext` already accommodates, since every rule receives the whole file set and `XQ1003` correlates markup against compiled assemblies. The open question is matching a theme to the controls it actually applies to: an `x:Key`'d theme reaches only what references it, while a keyless one reaches every control of that type in scope.
+
+### A `ContextMenu` inherits its target's `DataContext`, and `ContextRequested` BUBBLES
+
+**Symptom:** A context menu needs a command that lives outside the data context of the control it is attached to. The WPF habit is a `Tag` on the target plus a `PlacementTarget.Tag.Foo` walk.
+
+**Cause:** This inverts the WPF workaround rather than merely differing from it. A WPF `ContextMenu` is not in the visual tree, so reaching outward costs that dance. In Avalonia the menu inherits the `DataContext` of the control it is set on, and the right-click **bubbles** from the child.
+
+**Fix:** Hang the menu on an **ancestor** that still has the context you need and let the target sit inside it. No `$parent` cast, no `ElementName`, no `Tag`.
+
+```xml
+<!-- The menu lives on the wrapper, which still has the outer context.
+     A right-click on the inner pane bubbles up to it. -->
+<Border DataContext="{Binding Outer}">
+    <Border.ContextMenu>
+        <ContextMenu>
+            <MenuItem Header="Outer command" Command="{Binding DoOuterThing}" />
+        </ContextMenu>
+    </Border.ContextMenu>
+    <local:InnerPane DataContext="{Binding Inner}" />
+</Border>
+```
+
+⛔ **The whole arrangement rests on one attribute's placement.** Moving `DataContext` up onto that ancestor — the tidying any reader would reach for — silently takes the outer commands away. With compiled bindings it is at least a build error rather than a null at runtime.
+
+⚠ **Corollary: `IsVisible` belongs on the wrapper, not the inner control.** Left on the child, a collapsed pane is a *visible* host holding an invisible child — a live context menu floating over a pane that is not there.
+
 ## Virtualization / perf
 
 ### Virtualization needs a BOUNDED viewport — and it does not reach into a nested items host
@@ -688,6 +734,27 @@ LocalizationService.ApplyCulture(DebugFlags.CultureOverride);
 // AppDomain handler + Serilog ConfigureLogging here
 DebugFlags.LogActiveFlags();                          // flush deferred warnings
 ```
+
+## Testing
+
+### A headless fixture can press a REAL key — key bindings are testable
+
+**Symptom:** Key-binding coverage gets written off as untestable, on the assumption that pressing a key needs a desktop session or synthetic input nobody wants in CI.
+
+**Cause:** The assumption is simply wrong. `Avalonia.Headless`'s `HeadlessWindowExtensions.KeyPressQwerty(topLevel, PhysicalKey, RawInputModifiers)` raises the key through **the same input stack the desktop uses**. No sandbox, no synthetic input, no desktop taken.
+
+**Fix:** Press the key.
+
+```csharp
+window.KeyPressQwerty(PhysicalKey.KeyC, RawInputModifiers.Control);
+```
+
+⭐ **What decides whether a chord is reachable is the DATA CONTEXT, not the key.** A binding on a control whose view binds a single interface is testable, because a fake can implement it. A binding on a view needing a 23-parameter view model still cannot be pressed — so the testability of a shortcut is a fact about the view model's surface, which is worth knowing before writing the view.
+
+Two that go with it:
+
+- ⛔ **The command under a `KeyBinding` is asked `CanExecute` BEFORE it is invoked.** A fake command answering `false` records nothing, however perfectly the chord is bound — so the test passes its own setup and proves nothing.
+- ⚠ **Assert the MODIFIER, not just the key.** A gesture written `"C"` instead of `"Ctrl+C"` parses, builds and binds. The negative case is the one worth writing.
 
 ---
 
