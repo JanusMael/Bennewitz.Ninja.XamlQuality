@@ -83,6 +83,40 @@ This one is GOOD — it's how the nav-tree icon column hides on sub-items withou
            Width="18" />
 ```
 
+### There is no automatic LAYOUT CLIP — a control too big for its slot is laid out anyway, and whether it is *drawn* depends on the container
+
+**Symptom:** a child inside a `Grid` row or column smaller than the child wants does not disappear. Depending on what is above it, it is either painted on top of its neighbours or invisible-but-still-present — and in both cases it keeps its full size in the automation tree, so a UI test or a screen reader sees a pane the user cannot.
+
+**Cause:** WPF arranges such a child at the size it asked for and then **clips it to the slot** — `FrameworkElement.ArrangeCore` raises `needsClipBounds`, `GetLayoutClip` returns the slot rectangle. Avalonia has no equivalent step. Its substitute is `ClipToBounds`, which is opt-in per control, and **the defaults are not the ones a WPF developer would guess**:
+
+| Defaults `ClipToBounds="True"` | Defaults `"False"` |
+|---|---|
+| `ContentControl` — so every `UserControl` and every `ListBox` | `Control`, `Border`, `Grid` and the panels |
+
+So the same over-sized child paints over its neighbours inside a `Border`, and is contained inside a `UserControl`. There is no single answer to "will I see it".
+
+**Two details that make the numbers confusing:**
+
+- **The overflow is CENTRED on the slot, not spilled downward.** A 50-high child in a zero-high row reports `Bounds.Top = -25`, height 50 — 25 above and 25 below. A measurement that looks like it straddles a boundary probably is.
+- **`ClipToBounds` does not touch the automation tree.** Clipping is a render concern. The clipped child's `AutomationPeer.GetBoundingRectangle()` still reports the full 50.
+
+**Fix:** `IsVisible`, which WPF never needed — it removes the element from layout *and* from the automation tree together, which clipping does not. Bind it alongside whatever zeroes the row.
+
+```xml
+<!-- The row height alone is not enough: the child's own MinHeight overrides it. -->
+<RowDefinition Height="0" />
+...
+<local:SomePane Grid.Row="3" IsVisible="{Binding #TheSplitter.IsVisible}" />
+```
+
+Do **not** reach for `ClipToBounds="True"` across the tree. It costs a clip push per element, it leaves the automation half of the problem untouched, and it re-hides the class of bug you just gained the ability to see.
+
+**The reframe, which is the reason this is worth fixing rather than papering over:** WPF's layout clip was silently rescuing layouts that were already wrong. A port does not create these — it surfaces them. So the answer is usually to fix the layout, not to restore the net.
+
+> **⚠ The trap underneath this one, and it is the expensive part.** `Visual.Bounds` and an automation peer's bounding rectangle are **not the same object**, and it is very easy to assert on one while reasoning about the other. This entry exists because a port measured a 50px overlap through UI Automation, reasoned about it as layout, and concluded the pane was painting over its neighbours. It was not — a `UserControl` was clipping it. The defaults table above is what to expect; *which object you interrogate* is what actually decides the answer.
+
+<sub>Measured on Avalonia 12.1.2, .NET 10, in the TailBlazer WPF→Avalonia port (`LayoutClipFixture`, 10 tests). The `ClipToBounds` defaults, the centring and the automation bounds are captures and peer reads under the **headless** platform — Avalonia's own peers, not the Windows UIA provider; the original field measurement came through real UIA and agreed. The WPF half is stated from `ArrangeCore`'s documented behaviour and is **not** measured here.</sub>
+
 ---
 
 ## Styling / theming
