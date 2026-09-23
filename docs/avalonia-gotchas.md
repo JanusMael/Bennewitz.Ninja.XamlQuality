@@ -209,6 +209,30 @@ Both traps can be present at once and mask each other — fixing only the scopin
 
 ---
 
+### An unresolvable `avares://` URI fails in FOUR different ways, and only the fallback list is silent
+
+**Symptom:** A URI that stopped resolving is caught by the build in one place, throws from layout in another, and in a third draws the wrong font without a word. The usual trigger is an assembly rename: `avares://` names the ASSEMBLY, not the package id or the namespace, so a rename breaks every URI a consumer wrote against the old name.
+
+**Cause:** Each consumer resolves the URI at a different time, and only one of them has anything to fall back on. Measured with one URI naming a renamed assembly's OLD name:
+
+| Where the URI is | What happens |
+|---|---|
+| `StyleInclude` in AXAML | **Build error** `AVLN2000`: `Assembly "…" was not found`, or for the right assembly and a missing file, `Unable to resolve XAML resource`. The XAML compiler resolves it. |
+| A `StyleInclude` built in code | **Throws** `XamlLoadException` when it loads: `No precompiled XAML found for …` |
+| `FontFamily` naming one family | **Throws** `InvalidOperationException` the first time text in it is laid out: `Could not create glyphTypeface`. It throws from `TextLayout`, and from a `TextBlock` in a shown `Window`. A wrong family name in the right assembly throws the same way. |
+| `FontFamily` with a fallback list, `…#JetBrains Mono NL, Consolas` | **Silent.** Text shapes with the next family and nothing reports it. |
+| `AssetLoader.Exists` on the file | `false`, no exception |
+
+⛔ **"A bad avares path fails silently" is the common belief, and it is wrong for the common case.** One family per `FontFamily` is what hosts write, and that is loud — but only at runtime, and only when a view using the family first measures text. A family used in one rarely opened view throws there and nowhere else.
+
+⚠ **A fallback list trades the exception for the wrong face.** That suits a font that may legitimately be missing. For a font the package ships, it hides the one failure worth seeing.
+
+**Fix:** a guard that does what the app does. **Lay out text** in every bundled family by the URI consumers are told to use, and assert the family the text was shaped with. `AssetLoader.Exists` is weaker: it proves the file is there, not that the name after the `#` matches the font inside it. The headless platform's default drawing (`UseHeadlessDrawing = true`) is enough — every case above behaved identically under it and under Skia, except for which font a fallback list lands on.
+
+<sub>Measured on Avalonia 12.1.0, Windows, on the headless platform under both Skia and headless drawing, using `ScopedEditors.AvaloniaUI`'s bundled JetBrains Mono NL and the pre-rename assembly name `ScopedEditors.Avalonia`. The fallback list shaped with `Consolas` under Skia, and with the stub's `BareMinimum` under headless drawing.</sub>
+
+---
+
 ### A THEMED resource looked up with a null variant resolves to NOTHING
 
 **Symptom:** A brush token you just added produces a plausible colour that is nonetheless the wrong one, and is identical in light and dark.
@@ -433,7 +457,7 @@ A host the view left unnamed copies down an empty string and stays unnamed — d
 
 ⚠ **A `NumericUpDown`'s spin buttons announced `Avalonia.Controls.PathIcon`** — same `ToString()` fallback as the `ItemsSource` container cases above, because Avalonia's default template gives them no name and their content is a `PathIcon`. Twelve of them in ClaudeForge (Essentials, General, Sandbox, Backup / Restore) and six on OpenCodeForge's Essentials page. **Fixed 2026-09-08.**
 
-This one cannot be fixed from a view, and no widening of the AXAML scan reaches it: the buttons exist only inside `ButtonSpinner`'s control template, so there is no element in any markup to annotate or to scan. They are named from the theme instead — `src/LayeredEditors.Avalonia/Themes/AccessibilityNames.axaml`, included by `SemiBundle.axaml`, which is the one line both apps' `App.axaml` already take from the shared library:
+This one cannot be fixed from a view, and no widening of the AXAML scan reaches it: the buttons exist only inside `ButtonSpinner`'s control template, so there is no element in any markup to annotate or to scan. They are named from the theme instead — `src/ScopedEditors.AvaloniaUI/Themes/AccessibilityNames.axaml` in [`Bennewitz.Ninja.ScopedEditors`](https://github.com/JanusMael/Bennewitz.Ninja.ScopedEditors), included by `SemiBundle.axaml`, which is the one line both apps' `App.axaml` already take from the shared library:
 
 ```xml
 <Style Selector="ButtonSpinner /template/ RepeatButton#PART_IncreaseButton">
@@ -444,7 +468,7 @@ This one cannot be fixed from a view, and no widening of the AXAML scan reaches 
 
 The `/template/` combinator is not optional — a selector without it does not reach an element that lives inside a control template. The two strings come from `WrapperStrings` so a host localises them through the same `Resolver` hook as the wrapper chrome.
 
-**Guard:** `tests/LayeredEditors.Avalonia.Tests/Themes/TemplatePartAutomationNameTests.cs` builds a real templated `NumericUpDown` on the headless UI thread — in an app that loads exactly the host's `SemiBundle.axaml` include — and reads its automation PEERS, because the `ToString()` fallback lives in the peer and only the peer can show it is gone. It asserts its own premise first (one `ButtonSpinner`, one button per part name), since a template whose parts get renamed would otherwise hand the test an empty set to pass over.
+**Guard:** ScopedEditors' `tests/ScopedEditors.Tests/Themes/TemplatePartAutomationNameTests.cs` builds a real templated `NumericUpDown` on the headless UI thread — in an app that loads exactly the host's `SemiBundle.axaml` include — and reads its automation PEERS, because the `ToString()` fallback lives in the peer and only the peer can show it is gone. It asserts its own premise first (one `ButtonSpinner`, one button per part name), since a template whose parts get renamed would otherwise hand the test an empty set to pass over.
 
 ⭐ **Related:** `CopyFromScreen` captures the **physical screen**, so screenshotting a background window silently yields whatever is on top of it — for one run here, the editor that launched the harness. Force the window foreground first (`ShowWindow` + `SetWindowPos` topmost + `SetForegroundWindow`) or treat the UIA dump, not the image, as the evidence.
 
@@ -669,9 +693,9 @@ Same caveat applies to any wrapper type that owns native resources via `IDisposa
 
 ---
 
-## Trim safety (Release publish only)
+## Trim safety
 
-See [TRIMMING.md](https://github.com/JanusMael/ClaudeForge/blob/main/TRIMMING.md) for the full set. Highlights repeated for discoverability:
+The first two entries come from an application's trimmed Release publish; ClaudeForge's [TRIMMING.md](https://github.com/JanusMael/ClaudeForge/blob/main/TRIMMING.md) has the full set. The rest are from the other side. A LIBRARY has no publish of its own, so its trim hazards surface in a consumer's build unless it goes looking for them itself. The `trim` job in [`Bennewitz.Ninja.ScopedEditors`](https://github.com/JanusMael/Bennewitz.Ninja.ScopedEditors/tree/main/trimcheck) is the worked example.
 
 ### `JsonArray.Add<T>(T)` is `RequiresUnreferencedCode` — cast to `JsonNode?`
 
@@ -696,6 +720,68 @@ arr.Add((JsonNode?)JsonValue.Create(s));
 **Cause:** `[UnconditionalSuppressMessage]` only silences the warning. It doesn't tell the trimmer to keep types alive.
 
 **Fix:** Add `<TrimmerRootAssembly Include="The.Package" />` in the .csproj for any package whose code path includes `Assembly.GetType(string)` + `Activator.CreateInstance` over its own types (Markdown.Avalonia is the example in this codebase). See TRIMMING.md for the full safety mechanism table.
+
+### The trim analyser never sees compiled XAML — only ILLink does
+
+**Symptom:** A reflection binding in an `.axaml` file builds clean under `-warnaserror` with the trim analyser on, and ships. The first report is an `IL2026` in whichever trimmed publish next reaches it — for a library, a consumer's.
+
+**Cause:** The trim analyser is a Roslyn analyser, so it reads C#. Avalonia's XAML compiler weaves the markup into IL **after** Roslyn has finished, so nothing the analyser runs over contains it. ILLink reads the finished assembly, woven IL included, and maps the warning back to the markup line:
+
+```text
+Themes/TrimCanary.axaml(5,29): Trim analysis warning IL2026:
+  CompiledAvaloniaXaml.!AvaloniaResources.Populate:/Themes/TrimCanary.axaml(IServiceProvider, Styles):
+  Using member 'Avalonia.Markup.Xaml.MarkupExtensions.ReflectionBindingExtension.ReflectionBindingExtension(String)'
+  which has 'RequiresUnreferencedCodeAttribute' can break functionality when trimming application code.
+  BindingExpression and ReflectionBinding heavily use reflection. Consider using CompiledBindings instead.
+```
+
+The canary was a `Styles` file with `x:CompileBindings="False"` and one `{Binding}` in a setter. The build that compiled it printed nothing at all.
+
+**Fix:** An application's trimmed Release publish already reads the woven IL. A library needs a trimmed publish made for it — see the next entry. `AvaloniaUseCompiledBindingsByDefault=true` makes reflection bindings opt-in, which narrows the problem without closing it: `x:CompileBindings="False"` and an explicit `{ReflectionBinding}` still compile.
+
+⭐ **Candidate rule.** The markup half is visible to a scan: `x:CompileBindings="False"` and `{ReflectionBinding …}`. Whether a plain `{Binding}` compiles depends on the project's MSBuild default, which no markup scan reads, so ILLink stays the backstop either way.
+
+### A library's trim check must ROOT the library, or it passes by deleting what it should check
+
+**Symptom:** A trimmed publish of a test app that references the library reports no warnings, and the library still ships a trim hazard.
+
+**Cause:** ILLink analyses only what it keeps. An app that never calls into the library lets ILLink remove it, and removed code cannot warn. Measured on `ScopedEditors.AvaloniaUI`: with its `TrimmerRootAssembly` line deleted, the publish still exited 0, and the three warnings reachable only through that assembly vanished with it.
+
+**Fix:** Microsoft's recommended trimming test app — an executable that references every shipped project and roots each one by **assembly** name — then compare its warnings with a committed baseline:
+
+```xml
+<PublishTrimmed>true</PublishTrimmed>
+<TrimMode>full</TrimMode>
+<TrimmerSingleWarn>false</TrimmerSingleWarn>
+<!-- one per shipped project -->
+<TrimmerRootAssembly Include="ScopedEditors.AvaloniaUI" />
+```
+
+Fail in **both** directions. A new warning is a hazard just added; a missing one means the baseline is stale or ILLink stopped analysing something. Keep at least one expected warning that is reachable only through the rooted code — here, DataGrid's, in the next entry — so a publish that analysed nothing cannot pass. That check is proven the same way: an empty log, an unrooted assembly, a reflection binding in AXAML and a suppressed `Type.GetType` each fail it, and the restored tree passes.
+
+⚠ **`TrimmerSingleWarn=false` is what keeps a dependency's warnings comparable.** At its default, ILLink collapses every warning from a PACKAGE assembly into one `IL2104: Assembly 'Avalonia.Controls.DataGrid' produced trim warnings`, so an update that added a hazard would leave the log unchanged. Warnings from the app's own project references still print one by one.
+
+### `Avalonia.Controls.DataGrid` carries trim warnings of its own
+
+Any trimmed publish that reaches DataGrid reports them, however clean your own code is. On 12.1.0 they are three distinct `IL2070`s in one method, `Avalonia.Controls.Utils.TypeHelper.GetPropertyOrIndexer`, which walks property paths by reflection. At the default `TrimmerSingleWarn` they arrive as a single `IL2104` naming the assembly.
+
+They are the price of referencing DataGrid, not a defect to hunt for in your code. Baseline them rather than suppress them, and re-read the baseline whenever DataGrid's version moves: Microsoft's guidance is explicit that a dependency update can add trim warnings without any API change.
+
+### `#pragma warning disable IL2xxx` silences the analyser, NOT ILLink
+
+**Symptom:** A trim warning is "fixed" with a pragma, the build goes green, and the hazard ships.
+
+**Cause:** A pragma is source-level: it tells the compiler what not to report. ILLink reads IL and never sees it. Measured: `Type.GetType(name)` raises `IL2057` from the analyser — an error, under `TreatWarningsAsErrors` — and builds clean under `#pragma warning disable IL2057`, where ILLink still reports `IL2057` for the same call.
+
+**Fix:** Fix the code. Where the call is genuinely safe, `[UnconditionalSuppressMessage]` is the suppression that is persisted in IL and respected by ILLink too — and, as the `TrimmerRootAssembly` entry above says, it only silences the warning. It keeps nothing alive.
+
+### Without `IsTrimmable`, a `TrimMode=partial` publish leaves a library untrimmed, and nothing says so
+
+**Symptom:** Nothing fails. A consumer publishing with `TrimMode=partial` keeps your assemblies whole.
+
+**Cause:** `<IsTrimmable>true</IsTrimmable>` compiles to `[assembly: AssemblyMetadata("IsTrimmable", "True")]`, and `partial` trims **only** assemblies that carry it. The same property is what switches on trim warnings for the library's own build, so a library without it has not checked itself either. `Bennewitz.Ninja`'s first package releases shipped that way: the package template set neither property, and no build or test noticed.
+
+**Fix:** Set `IsTrimmable` for every shipped project, and assert the mark on the **compiled** assembly rather than in the project file. A property inherited from a `Directory.Build.props` appears in no csproj, and the mark inside the DLL is the only thing a consumer's publish obeys.
 
 ---
 
@@ -805,5 +891,5 @@ Two that go with it:
 
 - The codebase uses **compiled bindings** + **[ObservableProperty]** + **CTK source generators** wherever possible. Hand-rolled `INotifyPropertyChanged` should be a last resort.
 - `dotnet build -warnaserror` and `dotnet test` both pass on a clean tree. If your change breaks either, fix it before shipping.
-- `dotnet publish -c Release -r win-x64` is the trim canary. New code paths should pass that without warnings — see TRIMMING.md.
+- `dotnet publish -c Release -r win-x64` is the trim canary. New code paths should pass that without warnings — see TRIMMING.md. A library has no publish of its own: root it in a trimming test app, as in *Trim safety* above.
 - Boot the published binary at least once before declaring work done. The SkiaSharp use-after-free in this codebase's history would have been caught by a 5-second smoke run.
