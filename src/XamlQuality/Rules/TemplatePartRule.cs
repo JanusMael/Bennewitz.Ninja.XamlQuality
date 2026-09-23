@@ -29,9 +29,11 @@ namespace Bennewitz.Ninja.XamlQuality.Rules;
 /// the case worth catching.
 /// </para>
 /// <para>
-/// A control whose theme is not in the scanned markup is skipped rather than reported: its theme
-/// may ship from another package. That shows up as a lower <see cref="XamlRuleResult.Inspected"/>,
-/// which is the honest signal.
+/// ⚠ <b>What the rule sees but cannot check is named in <see cref="XamlRuleResult.Skipped"/>.</b>
+/// A control with a theme in the scan and no part found in its code contributes nothing to
+/// <see cref="XamlRuleResult.Inspected"/>, and neither does one whose parts are known but whose
+/// theme is not in the scan, since it may ship from another package. A lower count showed that
+/// something fell out; the skip says which control, and why.
 /// </para>
 /// </remarks>
 public sealed class TemplatePartRule : IXamlRule
@@ -50,15 +52,18 @@ public sealed class TemplatePartRule : IXamlRule
     {
         ArgumentNullException.ThrowIfNull(context);
 
-        Dictionary<string, SortedSet<string>> declared = PartsDeclaredInCode(context.Assemblies);
-        if (declared.Count == 0)
+        if (context.Assemblies.Count == 0)
         {
             // Nothing to check against. Zero findings AND zero inspected, so a consumer who forgot
             // WithAssemblies sees the difference between "agrees" and "never asked".
             return XamlRuleResult.Clean(0);
         }
 
+        (Dictionary<string, SortedSet<string>> declared, HashSet<string> known) = ReadControls(context.Assemblies);
+
         List<XamlFinding> findings = [];
+        List<XamlSkip> skipped = [];
+        HashSet<string> themed = new(StringComparer.Ordinal);
         int inspected = 0;
 
         foreach (XamlFile file in context.ParsedFiles)
@@ -66,8 +71,32 @@ public sealed class TemplatePartRule : IXamlRule
             foreach (XElement theme in file.Document!.Descendants()
                          .Where(e => string.Equals(e.Name.LocalName, "ControlTheme", StringComparison.Ordinal)))
             {
-                if (TargetTypeOf(theme) is not { } target || !declared.TryGetValue(target, out SortedSet<string>? wanted))
+                if (TargetTypeOf(theme) is not { } target)
                 {
+                    continue;
+                }
+
+                themed.Add(target);
+                int? line = (theme as IXmlLineInfo).HasLineInfo()
+                    ? ((IXmlLineInfo)theme).LineNumber
+                    : null;
+
+                if (!declared.TryGetValue(target, out SortedSet<string>? wanted))
+                {
+                    // A theme for a type the scanned assemblies do not hold is not the scan's to
+                    // explain: it is usually a framework control's.
+                    if (known.Contains(target))
+                    {
+                        skipped.Add(new XamlSkip(
+                            target,
+                            "It has a ControlTheme here, but no template part was found in its code: no "
+                            + "PART_ constant, and no PART_ literal passed to a Find or Get lookup. Either it "
+                            + "has no parts, or it names them in a way this rule cannot read: built at "
+                            + "runtime, or looked up through a helper named otherwise.",
+                            file.RelativePath,
+                            line));
+                    }
+
                     continue;
                 }
 
@@ -80,10 +109,6 @@ public sealed class TemplatePartRule : IXamlRule
                     {
                         continue;
                     }
-
-                    int? line = (theme as IXmlLineInfo).HasLineInfo()
-                        ? ((IXmlLineInfo)theme).LineNumber
-                        : null;
 
                     findings.Add(new XamlFinding(
                         Id,
@@ -98,52 +123,134 @@ public sealed class TemplatePartRule : IXamlRule
             }
         }
 
-        return new XamlRuleResult(findings, inspected);
+        foreach ((string control, SortedSet<string> parts) in declared
+                     .Where(entry => !themed.Contains(entry.Key))
+                     .OrderBy(entry => entry.Key, StringComparer.Ordinal))
+        {
+            skipped.Add(new XamlSkip(
+                control,
+                $"It declares {string.Join(", ", parts)}, but no ControlTheme for it is in the scanned "
+                + "markup, so those parts were not checked. Its theme may ship from another package; "
+                + "if it is yours, scan the folder that holds it."));
+        }
+
+        return new XamlRuleResult(findings, inspected) { Skipped = skipped };
     }
 
     /// <summary>
-    /// Part names each type declares, read from its public string constants.
+    /// The part names each type declares in its compiled code, and the name of every type the scan
+    /// can see.
     /// </summary>
     /// <remarks>
-    /// ⚠ <b>Constants, not string literals in method bodies.</b> Reflection cannot see a literal
-    /// passed to a lookup call, so a control that inlines <c>"PART_Foo"</c> is invisible here and
-    /// this rule reports nothing for it. Declaring parts as constants is the convention that makes
-    /// the contract checkable at all — and it is the convention every framework's own controls
-    /// follow.
+    /// <para>
+    /// ⭐ <b>Two sources, because controls use both.</b> A part name is a <c>PART_</c> string
+    /// constant, public or not, or a <c>PART_</c> string literal the type's code passes to a lookup.
+    /// The literal is the case constants alone missed: <c>NameScope.Find("PART_Foo")</c> in an
+    /// <c>OnApplyTemplate</c> override declares a part as surely as a constant does, and a rule that
+    /// read only public constants reported such a control clean while checking none of it. Non-public
+    /// types are read too, for two reasons: internal controls exist, and every lambda's closure is a
+    /// private nested type, so reading public types alone loses each literal written in a lambda.
+    /// </para>
+    /// <para>
+    /// ⛔ <b>Only a literal passed to a LOOKUP counts</b>: a call whose name starts with <c>Find</c> or
+    /// <c>Get</c>, which covers <c>NameScope.Find</c>, <c>FindControl</c>, <c>FindName</c>,
+    /// <c>Get</c> and <c>GetTemplateChild</c>. Compiled XAML loads every element name too, passing it
+    /// to <c>set_Name</c> and <c>Register</c> to name the element, or to <c>Name</c> to build a
+    /// selector. Counting those made every compiled theme look like a control with parts. Measured on
+    /// a real codebase before this filter: 34 true lookups, every one followed by <c>Find</c>, beside
+    /// 162 literals in compiled XAML, every one followed by one of those three.
+    /// </para>
+    /// <para>
+    /// ⚠ <b>Lambdas, local functions and iterators compile into nested types</b>, so their literals
+    /// are credited to the outermost type that declares them, the one a <c>ControlTheme</c> targets.
+    /// </para>
+    /// <para>
+    /// ⚠ <b>Three limits.</b> A name built at runtime (<c>"PART_" + name</c>) is invisible, and so is
+    /// a lookup through a helper whose name does not start with <c>Find</c> or <c>Get</c>; a control
+    /// left with no parts that way is named in <see cref="XamlRuleResult.Skipped"/>. And every lookup
+    /// is taken to be on the type's OWN template, so one that reaches into a child control's template
+    /// is checked against this type's theme, and reported there.
+    /// </para>
     /// </remarks>
-    private static Dictionary<string, SortedSet<string>> PartsDeclaredInCode(IReadOnlyList<Assembly> assemblies)
+    private static (Dictionary<string, SortedSet<string>> Declared, HashSet<string> Known) ReadControls(
+        IReadOnlyList<Assembly> assemblies)
     {
+        const BindingFlags Everything = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static
+                                        | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+
         Dictionary<string, SortedSet<string>> declared = new(StringComparer.Ordinal);
+        HashSet<string> known = new(StringComparer.Ordinal);
 
         foreach (Assembly assembly in assemblies)
         {
-            foreach (Type type in assembly.GetExportedTypes())
+            foreach (Type type in TypesOf(assembly))
             {
-                foreach (FieldInfo field in type.GetFields(BindingFlags.Public | BindingFlags.Static | BindingFlags.DeclaredOnly))
+                Type owner = type;
+                while (owner.DeclaringType is { } outer)
                 {
-                    if (!field.IsLiteral || field.FieldType != typeof(string))
-                    {
-                        continue;
-                    }
+                    owner = outer;
+                }
 
-                    if (field.GetRawConstantValue() is not string value
-                        || !value.StartsWith(PartPrefix, StringComparison.Ordinal))
-                    {
-                        continue;
-                    }
+                // Compiler-generated at the top level: <Module>, <PrivateImplementationDetails>.
+                if (owner.Name.StartsWith('<'))
+                {
+                    continue;
+                }
 
-                    if (!declared.TryGetValue(type.Name, out SortedSet<string>? parts))
+                known.Add(owner.Name);
+
+                IEnumerable<string?> constants = type.GetFields(Everything)
+                    .Where(field => field.IsLiteral && field.FieldType == typeof(string))
+                    .Select(field => field.GetRawConstantValue() as string);
+
+                IEnumerable<string> literals = type.GetMethods(Everything)
+                    .Cast<MethodBase>()
+                    .Concat(type.GetConstructors(Everything))
+                    .SelectMany(method => CompiledStrings.LoadedBy(method, IsPartName))
+                    .Where(loaded => IsLookup(loaded.NextCall))
+                    .Select(loaded => loaded.Value);
+
+                foreach (string name in constants.Concat(literals).OfType<string>().Where(IsPartName))
+                {
+                    if (!declared.TryGetValue(owner.Name, out SortedSet<string>? parts))
                     {
                         parts = new SortedSet<string>(StringComparer.Ordinal);
-                        declared[type.Name] = parts;
+                        declared[owner.Name] = parts;
                     }
 
-                    parts.Add(value);
+                    parts.Add(name);
                 }
             }
         }
 
-        return declared;
+        return (declared, known);
+    }
+
+    /// <summary>A part name: the prefix and something after it.</summary>
+    /// <remarks>
+    /// ⚠ The bare prefix is not a part. <c>"PART_" + name</c> loads exactly <c>"PART_"</c>, and
+    /// reading it as a name would report a part called <c>PART_</c> that no theme could declare.
+    /// </remarks>
+    private static bool IsPartName(string value) =>
+        value.Length > PartPrefix.Length && value.StartsWith(PartPrefix, StringComparison.Ordinal);
+
+    /// <summary>Whether a call looks a name up, as opposed to registering it or building a selector.</summary>
+    private static bool IsLookup(string? call) =>
+        call is not null
+        && (call.StartsWith("Find", StringComparison.Ordinal) || call.StartsWith("Get", StringComparison.Ordinal));
+
+    /// <summary>Every type in <paramref name="assembly"/> that loads, public or not.</summary>
+    private static IEnumerable<Type> TypesOf(Assembly assembly)
+    {
+        try
+        {
+            return assembly.GetTypes();
+        }
+        catch (ReflectionTypeLoadException ex)
+        {
+            // A type whose dependencies do not load is skipped rather than failing the whole scan.
+            return ex.Types.OfType<Type>();
+        }
     }
 
     /// <summary>

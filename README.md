@@ -59,6 +59,21 @@ own control names to the constructor — a control you wrote is exactly the one 
 will ever name, and leaving it out means the rule reports clean over the markup least likely to
 have been reviewed. Assert on `Inspected` to tell that apart from a clean result.
 
+**`XQ1003` reads part names from compiled code.** A control's parts are the `PART_` names it
+declares as string constants, public or not, and the `PART_` string literals its code passes to a
+lookup: a call whose name starts with `Find` or `Get`, such as `NameScope.Find("PART_Foo")` or
+`GetTemplateChild`. Lambdas and controls that are not public are read too. A literal passed to
+anything else is ignored, which is what keeps compiled XAML out: it passes every element name to
+`set_Name` and `Register`. Three limits. A name built at runtime (`"PART_" + name`) is invisible,
+and so is a lookup through a helper named otherwise. And every lookup is taken to be on the
+control's own template, so one that reaches into a child control's template is reported against
+this one.
+
+**Read `Skipped` as well as `Inspected`.** Every result also names what the rule saw but could not
+check. For `XQ1003` that is a control with a `ControlTheme` in the scan and no part found in its
+code, or a control that declares parts but has no theme in the scan. Neither is a violation, and
+some are correct; both are places where a clean result is not what it seems.
+
 ## Versioning
 
 Versions come from the release tag (`v1.2.3` → `1.2.3`), passed to the build as `/p:Version=`.

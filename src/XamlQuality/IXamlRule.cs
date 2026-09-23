@@ -43,4 +43,12 @@ public sealed record XamlRuleResult(IReadOnlyList<XamlFinding> Findings, int Ins
 {
     /// <summary>A result for a rule that examined things and found nothing wrong.</summary>
     public static XamlRuleResult Clean(int inspected) => new([], inspected);
+
+    /// <summary>What the rule saw but could not check, and why. Empty when it checked everything it saw.</summary>
+    /// <remarks>
+    /// ⚠ <b><see cref="Inspected"/> says how much was checked; this says what was not.</b> A
+    /// consumer asserting on both can tell a clean result from one that quietly skipped the control
+    /// that mattered. A skip is not a violation; see <see cref="XamlSkip"/>.
+    /// </remarks>
+    public IReadOnlyList<XamlSkip> Skipped { get; init; } = [];
 }
