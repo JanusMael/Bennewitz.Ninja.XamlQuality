@@ -47,7 +47,7 @@ internal static class AutomationName
         // on an exact string.
         foreach (XElement child in element.Elements())
         {
-            if (child.Name.LocalName.EndsWith(Attribute, StringComparison.Ordinal))
+            if (child.Name.LocalName.EndsWith(Attribute, StringComparison.Ordinal) && HasContent(child))
             {
                 return true;
             }
@@ -55,4 +55,13 @@ internal static class AutomationName
 
         return false;
     }
+
+    /// <summary>Whether a property element names anything: text, or an element such as a binding.</summary>
+    /// <remarks>
+    /// ⛔ The element spelling has to clear the same bar as the attribute. An empty, self-closing or
+    /// whitespace-only <c>&lt;AutomationProperties.Name&gt;</c> is as empty as <c>Name=""</c>, and
+    /// accepting it by name alone is the presence check the remarks above rule out.
+    /// </remarks>
+    private static bool HasContent(XElement propertyElement) =>
+        propertyElement.HasElements || !string.IsNullOrWhiteSpace(propertyElement.Value);
 }

@@ -81,6 +81,25 @@ public sealed class ExpanderAutomationNameRuleTests : IDisposable
     }
 
     /// <summary>
+    /// ⛔ The same bar for the element spelling: an empty property element is as empty as
+    /// <c>Name=""</c>. The helper is shared with XQ1002, so this is also the check that the two rules
+    /// have not drifted apart.
+    /// </summary>
+    [Fact]
+    public void AnExpanderNamedByAnEmptyPropertyElement_IsReported()
+    {
+        Write("EmptyElement.axaml",
+            $"<UserControl {NamespaceHeader}><Expander Header=\"Proxy\">"
+            + "<AutomationProperties.Name></AutomationProperties.Name>"
+            + "</Expander></UserControl>");
+
+        XamlRuleResult result = Run();
+
+        Assert.Equal(1, result.Inspected);
+        Assert.Single(result.Findings);
+    }
+
+    /// <summary>
     /// ⛔ An empty name is not a name. It satisfies a presence check and announces nothing, which
     /// is the failure the rule exists to prevent.
     /// </summary>

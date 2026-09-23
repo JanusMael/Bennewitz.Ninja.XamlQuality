@@ -95,6 +95,43 @@ public sealed class InteractiveAutomationNameRuleTests : IDisposable
     }
 
     /// <summary>
+    /// ⛔ The element spelling has to clear the same bar as the attribute. An empty or blank
+    /// property element announces exactly what <c>Name=""</c> does, which is nothing.
+    /// </summary>
+    [Theory]
+    [InlineData("<AutomationProperties.Name></AutomationProperties.Name>")]
+    [InlineData("<AutomationProperties.Name />")]
+    [InlineData("<AutomationProperties.Name>   </AutomationProperties.Name>")]
+    public void AnEmptyPropertyElement_IsNotAName(string element)
+    {
+        Write("EmptyElement.axaml",
+            $"<UserControl {NamespaceHeader}><Button Content=\"Save\">{element}</Button></UserControl>");
+
+        XamlRuleResult result = Run();
+
+        Assert.Equal(1, result.Inspected);
+        Assert.Single(result.Findings);
+    }
+
+    /// <summary>
+    /// And the check for the case above must not over-reach: a property element holding a binding
+    /// is a name, although it has no text of its own.
+    /// </summary>
+    [Fact]
+    public void APropertyElementHoldingABinding_Counts()
+    {
+        Write("BoundElement.axaml",
+            $"<UserControl {NamespaceHeader}><Button Content=\"Save\">"
+            + "<AutomationProperties.Name><Binding Path=\"Title\" /></AutomationProperties.Name>"
+            + "</Button></UserControl>");
+
+        XamlRuleResult result = Run();
+
+        Assert.Equal(1, result.Inspected);
+        Assert.Empty(result.Findings);
+    }
+
+    /// <summary>
     /// ⭐ The one that separates "nothing is wrong" from "nothing was checked". A consumer's own
     /// control is invisible to the framework list, so the rule walks straight past it and reports
     /// clean over exactly the markup least likely to have been reviewed.
