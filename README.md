@@ -41,6 +41,7 @@ people stop referencing.
 | `XQ1001` | Every Expander declares AutomationProperties.Name. |
 | `XQ1002` | Every interactive control declares AutomationProperties.Name. |
 | `XQ1003` | Every template part a control looks up is declared in its own theme. |
+| `XQ1004` | Every control fits the fixed Grid slot it is placed in. |
 <!-- END GENERATED RULES -->
 
 The table above is rendered from the rule types — `Id` and `Summary` on each `IXamlRule` — and a

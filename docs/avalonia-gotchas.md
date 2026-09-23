@@ -109,6 +109,8 @@ So the same over-sized child paints over its neighbours inside a `Border`, and i
 <local:SomePane Grid.Row="3" IsVisible="{Binding #TheSplitter.IsVisible}" />
 ```
 
+⭐ **The statically-decidable half of this is [`XQ1004`](../README.md#rules)** — a control declaring a `MinHeight`/`Height` larger than the FIXED `Grid` row or column it sits in. The rule stops there on purpose: a `*` row resolves against its siblings and `Auto` against content, so neither is knowable from markup, and whether anything clips depends on a container type a scan cannot identify once a consumer's own control is involved. Everything in this entry beyond that one check is why the prose stays.
+
 Do **not** reach for `ClipToBounds="True"` across the tree. It costs a clip push per element, it leaves the automation half of the problem untouched, and it re-hides the class of bug you just gained the ability to see.
 
 **The reframe, which is the reason this is worth fixing rather than papering over:** WPF's layout clip was silently rescuing layouts that were already wrong. A port does not create these — it surfaces them. So the answer is usually to fix the layout, not to restore the net.
