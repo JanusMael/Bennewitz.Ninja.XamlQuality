@@ -58,6 +58,10 @@ of how it was read.
 6. **What is not on screen is not in the tree.** A collapsed pane, a shut drawer, a zero-width
    column: hide it (`IsVisible=false` / `Visibility.Collapsed`), do not merely shrink or clip it.
    Clipping stops the paint and changes neither the layout bounds nor the automation tree.
+   **Custom-drawn is not a proxy for decorative.** Whether something is a control element depends
+   on whether a person can act on it. In a control library the custom-drawn surfaces are often the
+   interactive ones — that is why they were custom-drawn — and hiding them as decoration removes
+   exactly what most needs driving.
 7. **The application says what state the desktop left it in.** Publish session type, whether the
    window holds the foreground, and any test-mode placement on the main window's automation
    `HelpText` (TailBlazer: `ShellEnvironment`), updated on activation changes. A harness then reports
@@ -184,6 +188,8 @@ because the old code happened to share its outcome.
   gets a real assertion deleted.
 - **Restore by the inverse edit, never by `git checkout --`** while the file holds other uncommitted
   work — it reverts everything, silently.
+- **A mutation harness is code: an edit that matches nothing must fail, or a no-op mutation reads as
+  a surviving one.**
 - **To prove a runtime harness discriminates**, build the base commit in a detached worktree and
   point the harness at that executable. A harness that has only ever passed has not been shown to
   test anything.
