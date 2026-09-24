@@ -1,6 +1,6 @@
 using Bennewitz.Ninja.XamlQuality.ThemeAudit;
 
-namespace Bennewitz.Ninja.XamlQuality.ThemeAudit.Tests;
+namespace XamlQuality.Tests.ThemeAudit;
 
 public sealed class AuditColorTests
 {

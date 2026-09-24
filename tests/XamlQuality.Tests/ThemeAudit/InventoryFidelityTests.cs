@@ -1,6 +1,6 @@
 using Bennewitz.Ninja.XamlQuality.ThemeAudit;
 
-namespace Bennewitz.Ninja.XamlQuality.ThemeAudit.Tests;
+namespace XamlQuality.Tests.ThemeAudit;
 
 /// <summary>
 /// The facts the real reference themes forced into the inventory: Fluent and Simple declare only

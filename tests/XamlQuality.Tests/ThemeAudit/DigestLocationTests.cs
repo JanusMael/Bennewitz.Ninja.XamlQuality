@@ -1,7 +1,7 @@
 using Bennewitz.Ninja.XamlQuality.ThemeAudit;
 using Xunit;
 
-namespace Bennewitz.Ninja.XamlQuality.ThemeAudit.Tests;
+namespace XamlQuality.Tests.ThemeAudit;
 
 /// <summary>
 /// The audit digest describes what was audited, never where it is checked out.

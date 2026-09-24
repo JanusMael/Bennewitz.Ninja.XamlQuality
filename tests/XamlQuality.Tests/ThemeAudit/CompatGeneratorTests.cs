@@ -1,7 +1,7 @@
 using System.Xml.Linq;
 using Bennewitz.Ninja.XamlQuality.ThemeAudit;
 
-namespace Bennewitz.Ninja.XamlQuality.ThemeAudit.Tests;
+namespace XamlQuality.Tests.ThemeAudit;
 
 /// <summary>
 /// The compat generator on the committed fixture under <c>Fixtures/compat</c>: a Fluent-shaped
