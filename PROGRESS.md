@@ -15,13 +15,14 @@ released, who depends on what, and the rule backlog with any questions open for 
 
 Every change after the `v2026.3.924` tag (`808346b`) that a consumer can see; this repository's own
 working documents are left out. A change that makes a rule stricter or adds API goes here with its
-effect on a consumer, so the release that carries it can say so.
+effect on a consumer, so the release that carries it can say so. `main` takes squash and rebase
+merges only, and both give a branch's commits new hashes, so a row cites its pull request.
 
-| Commit | Change | Effect on a consumer |
+| Commit or PR | Change | Effect on a consumer |
 |---|---|---|
 | `964469f` | `docs/avalonia-gotchas.md` gains two UI Automation entries from the TailBlazor port: before Avalonia 12.1.3 a list's selection reaches a Windows UIA client empty, and as of 12.1.3 a `ListBox`'s `ScrollPattern` is inert | Docs only |
 | `9bb7285` | XQ1004 measures a control where the framework's `Grid` places it: an index past the last definition in the last one, and a span across every fixed slot it crosses plus the spacing between them. A span across an `Auto` or `*` slot, or a bound index, span or spacing, is not decidable | A control that fits the slots it spans is no longer reported, which was a false positive in `2026.3.924`. A control with an out-of-range index is now measured against the last slot and may be reported. The family's markup reads the same before and after: 459 controls, 0 findings |
-| `c54c51c` | `docs/avalonia-gotchas.md` stops claiming that `XQ1001` and `XQ1002` began as its entries, and `CompatMapping`'s doc comments say the reviewed mappings ship with the library | Docs only |
+| PR #9 | `docs/avalonia-gotchas.md` stops claiming that `XQ1001` and `XQ1002` began as its entries, and `CompatMapping`'s doc comments say the reviewed mappings ship with the library | Docs only |
 
 ## Consumers inside the family
 
