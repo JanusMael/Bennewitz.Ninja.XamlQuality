@@ -42,6 +42,7 @@ people stop referencing.
 | `XQ1002` | Every interactive control declares AutomationProperties.Name. |
 | `XQ1003` | Every template part a control looks up is declared in its own theme. |
 | `XQ1004` | Every control fits the fixed Grid slot it is placed in. |
+| `XQ1005` | Every key binding on an items control sits where keyboard focus can reach it. |
 <!-- END GENERATED RULES -->
 
 The table above is rendered from the rule types — `Id` and `Summary` on each `IXamlRule` — and a
@@ -69,11 +70,21 @@ and so is a lookup through a helper named otherwise. And every lookup is taken t
 control's own template, so one that reaches into a child control's template is reported against
 this one.
 
+**`XQ1005` needs the assemblies the markup belongs to.** A key binding fires only while focus is on
+its control or inside it, so the rule asks, of every key binding on an items control, whether
+anything in that path can take focus: the control, its item containers, or what its item template
+puts in them. Whether a type takes focus by default, which container an items control generates,
+and whether an element presents items at all are read from compiled types. Pass the application's
+own assembly to `WithAssemblies`; the framework is reached through its references. The rule reports
+only what it can decide, and key bindings on other controls are not checked.
+
 **Read `Skipped` as well as `Inspected`.** Every result also names what the rule saw but could not
 check. For `XQ1003` that is a control with a `ControlTheme` in the scan and no part found in its
 code, a control that declares parts but has no theme in the scan, and, when the scan was given no
-assemblies at all, every themed control. None is a violation, and some are correct; all are places
-where a clean result is not what it seems.
+assemblies at all, every themed control. For `XQ1005` it is every key binding it could not decide:
+one where a style sets focus, rows with no item template, rows that present items of their own as
+a tree's do, and content whose template the scan does not hold. None is a violation, and some are
+correct; all are places where a clean result is not what it seems.
 
 ## Versioning
 

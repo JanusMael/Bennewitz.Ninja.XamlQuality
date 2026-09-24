@@ -66,6 +66,12 @@ are the ones that shaped the design:
 - **`XQ1004`** reports a control whose declared size exceeds the fixed Grid row or column it sits in.
   It asks about the automation tree, which clipping never changes, and that is what keeps it
   decidable from markup.
+- **`XQ1005`** reports a key binding on an items control where nothing in its focus path can take
+  focus: the control, its item containers, or what its item template puts in them. It is the first
+  rule to read what the framework does by default, from its property metadata after running each
+  type's class constructors, and the first to follow resources the way the framework's lookup does,
+  through themes, `BasedOn` chains, ancestors' resources and includes. What it cannot decide from
+  markup, it names in `Skipped`.
 
 There is no rule registry: a consumer constructs each rule by name. That makes the README's rules
 table the only enumeration of the rules anywhere, which is why a test generates it from the rule
@@ -93,7 +99,8 @@ records which types are public and which stay internal.
 | `docs/publishing.md` | Trusted publishing, the version rule, and verifying a release against the feed |
 
 The gotchas document lives beside the rules on purpose. An entry that can be checked mechanically is
-promoted to a rule, and the entry keeps a line pointing at the rule's id, as `XQ1004`'s does.
+promoted to a rule, and the entry keeps a line pointing at the rule's id, as `XQ1004`'s and
+`XQ1005`'s do.
 `XQ1001` and `XQ1002` began as guards hand-rolled in application test suites, not as entries.
 Other repositories contribute entries by message and cite the document by path.
 
@@ -137,6 +144,11 @@ counts.
 | IL is decoded instruction by instruction, each operand stepped over by its declared size | An operand byte that happens to equal the `ldstr` opcode is misread as a string load | `CompiledStrings` remarks |
 | `XQ1004` checks fixed slot sizes only | False positives on `*` and `Auto` rows, which markup cannot resolve | `GridSlotOverflowRule` remarks; tests `GridSlotOverflowRuleTests.AStarRow_IsNotDecidableAndIsNotReported`, `GridSlotOverflowRuleTests.AnAutoRow_IsNotDecidableAndIsNotReported` |
 | `XQ1004` measures a control where the framework's `Grid` places it: an index past the last definition in the last one, and a span across every fixed slot it crosses plus the spacing between them, clamped at the edge | A control that fits its span is reported against its first slot, or one placed past the end escapes the check while counting as inspected | `GridSlotOverflowRule` remarks; tests `GridSlotOverflowRuleTests.AChildThatFitsTheColumnsItSpans_IsNotReported`, `GridSlotOverflowRuleTests.AnIndexPastTheLastColumn_IsMeasuredAgainstTheLastColumn`, `GridSlotOverflowRuleTests.ASpanPastTheLastColumn_IsClampedToTheColumnsThatRemain` |
+| `XQ1005` runs every class constructor in a type's chain before reading its `Focusable` default | Read cold, every control reports unfocusable, and every correct list is reported | `ElementTypes` remarks; test `KeyBindingFocusRuleTests.AListWithStockRows_IsLive_BecauseItsRowsTakeFocus` |
+| `XQ1005` reports a binding only when the control, its containers and everything its item template holds cannot take focus; a style, a missing item template, rows that present items of their own, and content with a template of its own are named in `Skipped` | A binding that works is reported, and people stop reading the rule | `KeyBindingFocusRule` remarks; tests `KeyBindingFocusRuleTests.AStyleThatSetsFocusableOnTheRows_StopsTheRule`, `KeyBindingFocusRuleTests.UnfocusableRowsWithNoItemTemplate_AreSkippedNotReported`, `KeyBindingFocusRuleTests.ATreeViewWithUnfocusableRows_IsSkipped_BecauseItsRowsCarryAHeader`, `KeyBindingFocusRuleTests.ATemplatedControlInTheItemTemplate_IsSkipped` |
+| An implicit theme is keyed `{x:Type T}`, and reaches an element from its own resources, an ancestor's, what they include, or the application's; one beside it in the same file does not, and one in another file is skipped | A theme is applied where it never reaches, or ignored where it does | `ResourceScope` remarks; tests `KeyBindingFocusRuleTests.AnImplicitThemeInASiblingsResources_DoesNotReachTheList`, `KeyBindingFocusRuleTests.AnImplicitThemeInAnotherViewsResources_IsSkipped`, `KeyBindingFocusRuleTests.AnImplicitThemeInADictionaryTheApplicationIncludes_IsReported` |
+| A control's implicit theme is looked up under the type its `StyleKeyOverride` names with a `typeof`, read from IL, else under its own type | A custom control that borrows its base's theme, as TailBlazer's `LinesListBox` does, is judged by a theme that never reaches it | `ElementTypes.StyleKeyOf` remarks; test `KeyBindingFocusRuleTests.AListThatBorrowsItsBasesThemeKey_GetsItsBasesImplicitTheme` |
+| `XQ1005` never throws on a consumer's build output: a type whose dependencies do not load is unknown, never unfocusable | One missing dependency fails the whole scan, or hides a control that could take focus | `ElementTypes.IsUnreadable` and its callers; `KeyBindingFocusRule.Analyze` |
 | A rule id is permanent public API | Any suppression keyed on the old id silently stops applying | `IXamlRule.Id`; test `RulesCatalogTests.EveryRuleId_IsUnique` |
 | Every rule type is public and has a parameterless constructor | The rule vanishes from the README table, or generating the table throws | tests `RulesCatalogTests.EveryRuleType_IsPublic`, `RulesCatalogTests.TheReadmeRulesTable_IsWhatTheRuleTypesSay` |
 | The README's rules table, between the `BEGIN GENERATED RULES` and `END GENERATED RULES` markers, is generated; the prose outside them is hand-written | A hand edit to the table fails the build, and a generator that owned the whole section would delete the prose about how rules overlap | `RulesCatalogTests` |
