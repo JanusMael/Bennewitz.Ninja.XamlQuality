@@ -17,7 +17,9 @@ Every change after the `v2026.3.924` tag (`808346b`) that a consumer can see; th
 working documents are left out. A change that makes a rule stricter or adds API goes here with its
 effect on a consumer, so the release that carries it can say so.
 
-Nothing yet.
+| Commit | Change | Effect on a consumer |
+|---|---|---|
+| `964469f` | `docs/avalonia-gotchas.md` gains two UI Automation entries from the TailBlazor port: before Avalonia 12.1.3 a list's selection reaches a Windows UIA client empty, and as of 12.1.3 a `ListBox`'s `ScrollPattern` is inert | Docs only |
 
 ## Consumers inside the family
 
@@ -30,10 +32,10 @@ Nothing yet.
   its tests, `PropertyEditorWrapper.axaml` twice, and `DangerSurfaceMarkupTests.cs`. They rely on the
   entries about emoji-font fallback and about `AutomationProperties.Name` being ignored on a
   `TextBlock`. Moving or renaming the file or those entries means updating them.
-- **OpenForge2k's tests**, jmui's `ClaudeForge.Tests`, pin `2026.3.921`, test-only, on `main` and on
-  `feat/scopededitors-stage-two`. They use `XamlScanContext.Load`, `ExpanderAutomationNameRule`, and
-  `XamlRuleResult.Inspected` / `.Findings`. The stricter XQ1001 reaches them when they move to
-  `2026.3.924`.
+- **OpenForge2k's tests**, jmui's `ClaudeForge.Tests`, pin `2026.3.921` on `main`, test-only. Its
+  `feat/scopededitors-stage-two`, open as PR #77, moves them to `2026.3.924`, which brings them the
+  stricter XQ1001. They use `XamlScanContext.Load`, `ExpanderAutomationNameRule`, and
+  `XamlRuleResult.Inspected` / `.Findings`.
 - **DiffView** intends to adopt XQ1003. Its adoption plan, still a draft, floors `Inspected` at 20,
   deliberately below its population of 33, now 34 with `1d9ccac`: the floor guards the silent
   `Clean(0)` of a scan handed no assemblies, not a part count, so `2026.3.924` needs no edit there.
