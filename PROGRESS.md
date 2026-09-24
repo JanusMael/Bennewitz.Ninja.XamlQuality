@@ -1,7 +1,7 @@
 # Progress
 
 The work state of `Bennewitz.Ninja.XamlQuality`: what is published, what is on `main` and not yet
-released, who depends on what, and the rule backlog with the questions still open for the developer.
+released, who depends on what, and the rule backlog with any questions open for the developer.
 
 ## Status
 
@@ -9,7 +9,7 @@ released, who depends on what, and the rule backlog with the questions still ope
 |---|---|
 | Published | `2026.3.922`: `Bennewitz.Ninja.XamlQuality` and `Bennewitz.Ninja.XamlQuality.ThemeAudit` |
 | `main` | carries the unreleased changes below |
-| Next release | Not scheduled; the developer decides. One release per calendar day |
+| Next release | `v2026.3.924` on 2026-09-24, tagged beside AppServices and ScopedEditors and carrying `main` as it stands; the backlog's rules ship in later releases. AssemblyQuality runs over both packages' assemblies before the tag. Decided 2026-09-23 |
 
 ### On `main`, not yet released
 
@@ -19,7 +19,7 @@ carries it has to say so.
 
 | Commit | Change | Effect on a consumer |
 |---|---|---|
-| `4f7bd62`, merged as `f7eaf8a` | ThemeAudit's content digest hashes each file's path relative to the scanned set's common ancestor, not the configuration's directory | **DiffView's CI is red on `main` until a release carries it.** A dependency resolved to a sibling checkout locally and to a fetched copy on CI produced two digests for the same files. DiffView predicts `b7ea0ec438c5` in both layouts afterwards, measured on a source build |
+| `4f7bd62`, merged as `f7eaf8a` | ThemeAudit's content digest hashes each file's path relative to the scanned set's common ancestor, not the configuration's directory | A committed report rebases once, so a consumer regenerates it on upgrade. **DiffView's digest test fails on every CI leg until then.** A dependency resolved to a sibling checkout locally and to a fetched copy on CI produced two digests for the same files. DiffView predicts `b7ea0ec438c5` in both layouts afterwards, measured on a source build. Its macOS and Windows legs also fail DiffView's own image snapshots, which no release here touches |
 | `1e84319` | **XQ1004**, a new rule: a control whose declared minimum or fixed size exceeds the fixed Grid row or column it sits in | New findings wherever a consumer adopts it |
 | `99299ec` | XQ1001 and XQ1002 reject an empty `<AutomationProperties.Name>` element, whether open-and-closed, self-closing or whitespace only | Markup that passed may now fail |
 | `1d9ccac` | XQ1003 reads part names from compiled code: constants whether public or not, and `PART_` literals passed to a `Find*` or `Get*` lookup, across non-public types and lambdas | More parts are inspected. DiffView measures 33 → 34, with no findings |
@@ -39,21 +39,30 @@ carries it has to say so.
   its tests, `PropertyEditorWrapper.axaml` twice, and `DangerSurfaceMarkupTests.cs`. They rely on the
   entries about emoji-font fallback and about `AutomationProperties.Name` being ignored on a
   `TextBlock`. Moving or renaming the file or those entries means updating them.
+- **OpenForge2k's tests**, jmui's `ClaudeForge.Tests`, pin `2026.3.921`, test-only, on `main` and on
+  `feat/scopededitors-stage-two`. They use `XamlScanContext.Load`, `ExpanderAutomationNameRule`, and
+  `XamlRuleResult.Inspected` / `.Findings`. The stricter XQ1001 in `99299ec` reaches them on their
+  next upgrade.
 - **DiffView** intends to adopt XQ1003 at 33 inspected against `2026.3.922`, raising its floor to 34
   once a release carries `1d9ccac`. It declined to promote its inline part name to a public constant,
-  which `1d9ccac` made unnecessary. Its adoption plan is still a draft.
+  which `1d9ccac` made unnecessary. Its adoption plan is still a draft. It proposed the peer check,
+  which is second in the backlog's order.
 
 ## Rule backlog
 
 Ids are permanent, and the README's rules table is generated from them, so an id is assigned only
 when a rule is written.
 
+The rules are written in the table's order, decided on 2026-09-23. The peer check comes second: it
+is the one candidate measured failing on a consumer, and an id on a control with no peer is as
+unreachable as a name.
+
 | Candidate | Source | Fit | What it checks | What it needs |
 |---|---|---|---|---|
 | `XQ1005`: a key binding on a control where nothing in its focus path can take focus | `avalonia-gotchas.md` | Scope decided 2026-09-23: all three cases | The host is unfocusable (`ListBox`, `ItemsControl`, `TreeView`); an `ItemContainerTheme` makes the container unfocusable; a keyless `ControlTheme` does the same | Types for the first case, the element alone for the second, theme resolution for the third. The third may stall, and must not hold back the first two |
-| An explicit `AutomationId` on every interactive control | `ai-drivable-ui.md`, rule 1 | Best fit | XQ1002's element set, both spellings, and an empty value is not an id. For MAUI, the plain `AutomationId` attribute too | Markup only. It can check that an id is present, not that it is unique inside an item template |
+| A custom control that carries an automation id or name but has no peer | `ai-drivable-ui.md`, rule 3; proposed by DiffView | Strong, and measured on a consumer | A themed control whose type overrides no `OnCreateAutomationPeer` below its framework base. DiffView measured all eight of its themed controls resolving to `NoneAutomationPeer`: names set, unreachable by a control-view search, behind a name gate that stayed green | Types, as XQ1003 does, over the same enumeration of themed controls XQ1003 already builds for `Skipped`. Also the framework's peer-less base types named, and an opt-out for a control that really is decorative, which custom drawing alone does not make it (`ai-drivable-ui.md`) |
+| An explicit `AutomationId` on every interactive control | `ai-drivable-ui.md`, rule 1 | Best fit. ScopedEditors and OpenForge2k set none in their markup today, so adopting it means a sweep | XQ1002's element set, both spellings, and an empty value is not an id. For MAUI, the plain `AutomationId` attribute too | Markup only. It can check that an id is present, not that it is unique inside an item template |
 | A zero-size Grid slot whose child sets no `IsVisible` | `ai-drivable-ui.md`, rule 6 | Partial | A child of a row or column with a literal `Height="0"` or `Width="0"` | Markup only. XQ1004 already covers the min-size half; bound sizes and clipping cannot be decided from markup |
-| A custom control that carries an automation id or name but has no peer | `ai-drivable-ui.md`, rule 3; proposed by DiffView | Strong, and measured on a consumer | A themed control whose type overrides no `OnCreateAutomationPeer` below its framework base. DiffView measured all eight of its themed controls resolving to `NoneAutomationPeer`: names set, unreachable by a control-view search, behind a name gate that stayed green | Types, as XQ1003 does, over the same enumeration of themed controls XQ1003 already builds for `Skipped`. Also the framework's peer-less base types named, and an opt-out for a control that really is decorative |
 | Containers generated from `ItemsSource` and named by `ToString()` | `ai-drivable-ui.md`, rule 2 | Partial | The `ItemTemplate`'s `x:DataType` overrides `ToString()`, or a container `Style` sets the name | Types. `TreeViewItem` ignores `ToString()` (measured, in `avalonia-gotchas.md`), so a tree needs the `Style` |
 
 **Not a fit:** the guide's rule 10, keeping popups in the window's tree. Avalonia's `OverlayPopups` is
@@ -62,14 +71,4 @@ startup assertion or a headless test.
 
 ## Questions for the developer
 
-Asked on 2026-09-23 and deferred; ask again.
-
-1. **Which of the candidates to write, and in what order.** `XQ1005` is already decided. The order
-   suggested when this was first asked was the explicit `AutomationId`, then the zero-size slot,
-   then the peer check, then the container half of the naming rule. **New since then:** DiffView
-   measured the peer gap on its own controls and proposes the peer check first, with the explicit
-   `AutomationId` after it. An id on a control with no peer is just as unreachable as a name.
-2. **When to release.** `main` carries a new rule, stricter rules and new public API. The strongest
-   reason to cut one: **DiffView's CI is red on `main` until a release carries `4f7bd62`**, although
-   DiffView reports nothing waiting on a deadline. Its XQ1003 floor rising to 34, and any move by
-   ScopedEditors off `2026.3.922`, wait on it as well.
+None open.
