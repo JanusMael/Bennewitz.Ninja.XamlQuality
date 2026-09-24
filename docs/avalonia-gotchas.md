@@ -9,11 +9,11 @@ Its companion is [ai-drivable-ui.md](ai-drivable-ui.md), the method for making a
 agent can drive and verify through its automation tree.
 
 ⭐ **An entry that can be checked mechanically belongs as a RULE in this library, not as prose
-here.** `XQ1004` began as an entry below. `XQ1001` and `XQ1002` began as guards hand-rolled in
-application test suites, and each turned out to be stricter than the guard it replaced in ways
-nobody predicted. Prose is for what a markup scan cannot see — template internals, runtime
-behaviour, platform differences. When an entry becomes checkable, promote it and leave a line here
-pointing at the rule id.
+here.** `XQ1004` and `XQ1005` began as entries below. `XQ1001` and `XQ1002` began as guards
+hand-rolled in application test suites, and each turned out to be stricter than the guard it
+replaced in ways nobody predicted. Prose is for what a markup scan cannot see — template
+internals, runtime behaviour, platform differences. When an entry becomes checkable, promote it
+and leave a line here pointing at the rule id.
 
 ⚠ **This document is Avalonia-specific; the library hosting it deliberately is not.** The rules read
 markup as XML and work against WPF and MAUI just as well — see the [README](../README.md). Keeping
@@ -510,17 +510,22 @@ Measured with the same binding in place both ways: **0 command executions focusi
 
 ⚠ **A theme on the ITEM CONTAINER kills the same chord, and the symptom is identical.** An `ItemContainerTheme` with one `Focusable="False"` setter on `ListBoxItem` leaves focus unable to land anywhere inside the list, so a binding on the *list* never routes. Measured, one `ListBox` with `Ctrl+C` bound on the host, the container theme the only variable: item `Focusable` `True`→`False`, `item.Focus()` `True`→`False`, chord **1 run → 0 runs**. ⛔ And `SelectedIndex = 0` still works either way, so rows still highlight and nothing throws — a list that looks entirely normal with a dead shortcut.
 
-⭐ **Candidate rule.** The condition is the **inverse** of the obvious one: flag a `KeyBindings` block on a control where nothing in the focus path can take focus. Searching for `Focusable="False"` in a `ControlTheme` would never fire, because nobody writes it.
+⭐ **The statically-decidable half of this is [`XQ1005`](../README.md#rules)**: a key binding on an items control where nothing in its focus path can take focus, meaning the control, its item containers, and what its item template puts in them. The condition is the **inverse** of the obvious one. A search for `Focusable="False"` would never fire on the list itself, because nobody writes it on a control that is unfocusable already. Measuring it for the rule, on Avalonia 12.1.3 under the Fluent, Simple and Semi themes, found five things:
 
-The two cases fold into one condition at runtime but **not statically**, and they cost differently:
+- **An unfocusable list alone is not a dead binding.** With stock rows, a click focuses the `ListBoxItem` and the chord runs. What kills it is the rows as well: an `ItemsControl`, whose containers are `ContentPresenter`s, or a list whose container theme sets `Focusable="False"`.
+- **An input in the item template revives it.** Around unfocusable rows, a click focuses a `TextBox` in the template, and the key bubbles through its row to the list.
+- **A `TreeView` survives unfocusable rows.** A `TreeViewItem`'s template carries a header that takes focus in all three themes, so a click still lands inside the tree.
+- **A row's focus arrives four ways, and a `Style` outranks the other three.** The four are the container theme (set on the list, or by the list's own theme), an implicit theme for the container type in the list's scope, a `Style`, and the type's default. A style setting `Focusable="True"` over a theme's `False` revived the chord.
+- ⛔ **An implicit theme is keyed `{x:Type ListBoxItem}`.** A `ControlTheme` with no `x:Key` does not compile (`AVLN3000`), and the runtime loader rejects it too, so "keyless" is not a form an implicit theme can take. It reaches the rows from the list's own resources, from an ancestor's, from a merged dictionary, or from the application's. It does not reach them from a sibling's resources.
 
-| Case | What it takes |
-|---|---|
-| The host is unfocusable (`ListBox`, `ItemsControl`, `TreeView`) | `FocusableProperty.GetMetadata(type)`, reflected **by name** over `XamlScanContext.Assemblies` as `XQ1003` already does — framework-neutral, no theme resolution |
-| `ItemContainerTheme` on that host sets the container unfocusable | Local: the theme is a property of the element already being examined |
-| A keyless `ControlTheme` for the container sitting in scope | Real theme resolution — which controls an implicit theme actually reaches |
+The rule names some arrangements in `Skipped` instead of deciding them, and those are why this prose stays:
 
-⭐ **All three are in scope**, decided 2026-09-23. The first two catch every arrangement measured so far and could ship alone; the third is included because a rule that is silent on implicit themes would be silent on the commonest way a theme reaches a control. ⚠ The third's prerequisite is unmeasured — how an implicit `ControlTheme`'s reach is actually determined — so it is the part that can stall, and it should not hold the first two back if it does. ⛔ Read the entry below before implementing the first: the obvious way to ask which types are focusable returns the wrong answer, and the obvious way to *check* that answer is itself unreliable.
+- a style, since styles are not evaluated;
+- a missing item template, since the rows then show data templates the rule does not resolve;
+- hierarchical rows like the tree's;
+- anything else with a template of its own, such as an `Expander`, whose header takes focus although the `Expander` itself cannot.
+
+A binding on a control that is not an items control is not checked at all. A `Border` or `UserControl` holding only text is just as dead (0 runs), but deciding that needs every template beneath it.
 
 ### `AvaloniaProperty` metadata reads its BASE default until the type's static constructor has run
 

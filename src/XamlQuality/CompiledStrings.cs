@@ -3,12 +3,13 @@ using System.Reflection.Emit;
 
 namespace Bennewitz.Ninja.XamlQuality;
 
-/// <summary>The string literals a method's compiled code loads, and what it calls with them.</summary>
+/// <summary>What a method's compiled code does: the string literals it loads, and what it calls.</summary>
 /// <remarks>
 /// <para>
 /// ⭐ <b>What reflection alone cannot see.</b> A constant is metadata; a literal passed straight to a
-/// call is only an <c>ldstr</c> instruction in a method body. Reading the IL is the one way to find
-/// it without the source, and it needs nothing beyond <see cref="System.Reflection"/>.
+/// call is only an <c>ldstr</c> instruction in a method body, and the type a method constructs is only
+/// a <c>newobj</c>. Reading the IL is the one way to find either without the source, and it needs
+/// nothing beyond <see cref="System.Reflection"/>.
 /// </para>
 /// <para>
 /// ⚠ <b>The same literal means different things by what it is passed to.</b> Compiled XAML loads
@@ -59,23 +60,115 @@ internal static class CompiledStrings
     /// </remarks>
     internal static IReadOnlyList<(string Value, string? NextCall)> LoadedBy(MethodBase method, Func<string, bool> wanted)
     {
-        byte[]? il;
-        try
-        {
-            il = method.GetMethodBody()?.GetILAsByteArray();
-        }
-        catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or BadImageFormatException)
-        {
-            return [];
-        }
-
-        if (il is null)
+        if (BodyOf(method) is not { } il)
         {
             return [];
         }
 
         List<(string Value, string? NextCall)> loaded = [];
         List<string> pending = [];
+        foreach ((OpCode code, int operand) in Instructions(il))
+        {
+            if (code.OperandType == OperandType.InlineString && operand + 4 <= il.Length)
+            {
+                string? value = Resolve(() => method.Module.ResolveString(BitConverter.ToInt32(il, operand)));
+                if (value is not null && wanted(value))
+                {
+                    pending.Add(value);
+                }
+            }
+            else if (pending.Count > 0
+                     && (code == OpCodes.Call || code == OpCodes.Callvirt || code == OpCodes.Newobj)
+                     && operand + 4 <= il.Length)
+            {
+                string? callee = Resolve(() => method.Module.ResolveMethod(BitConverter.ToInt32(il, operand))?.Name);
+                loaded.AddRange(pending.Select(value => (value, callee)));
+                pending.Clear();
+            }
+        }
+
+        loaded.AddRange(pending.Select(value => (value, (string?)null)));
+        return loaded;
+    }
+
+    /// <summary>
+    /// Every type <paramref name="method"/> constructs with <c>newobj</c>, in the order its code does.
+    /// Empty when the method has no IL body.
+    /// </summary>
+    /// <remarks>
+    /// A constructor whose type cannot be resolved, for instance because its assembly does not load,
+    /// is left out rather than guessed at.
+    /// </remarks>
+    internal static IReadOnlyList<Type> ConstructedBy(MethodBase method)
+    {
+        if (BodyOf(method) is not { } il)
+        {
+            return [];
+        }
+
+        Type[]? typeArguments = method.DeclaringType is { IsGenericType: true } owner ? owner.GetGenericArguments() : null;
+        Type[]? methodArguments = method.IsGenericMethod ? method.GetGenericArguments() : null;
+
+        List<Type> constructed = [];
+        foreach ((OpCode code, int operand) in Instructions(il))
+        {
+            if (code == OpCodes.Newobj
+                && operand + 4 <= il.Length
+                && Resolve(() => method.Module.ResolveMethod(BitConverter.ToInt32(il, operand), typeArguments, methodArguments)?.DeclaringType)
+                    is { } type)
+            {
+                constructed.Add(type);
+            }
+        }
+
+        return constructed;
+    }
+
+    /// <summary>
+    /// Every type <paramref name="method"/> loads with <c>ldtoken</c>, the instruction a <c>typeof</c>
+    /// compiles to, in the order its code does. Empty when the method has no IL body.
+    /// </summary>
+    internal static IReadOnlyList<Type> TypeOfsIn(MethodBase method)
+    {
+        if (BodyOf(method) is not { } il)
+        {
+            return [];
+        }
+
+        Type[]? typeArguments = method.DeclaringType is { IsGenericType: true } owner ? owner.GetGenericArguments() : null;
+        Type[]? methodArguments = method.IsGenericMethod ? method.GetGenericArguments() : null;
+
+        List<Type> loaded = [];
+        foreach ((OpCode code, int operand) in Instructions(il))
+        {
+            if (code == OpCodes.Ldtoken
+                && operand + 4 <= il.Length
+                && Resolve(() => method.Module.ResolveMember(BitConverter.ToInt32(il, operand), typeArguments, methodArguments))
+                    is Type type)
+            {
+                loaded.Add(type);
+            }
+        }
+
+        return loaded;
+    }
+
+    /// <summary>A method's IL, or <c>null</c> when it has none or it cannot be read.</summary>
+    private static byte[]? BodyOf(MethodBase method)
+    {
+        try
+        {
+            return method.GetMethodBody()?.GetILAsByteArray();
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or NotSupportedException or BadImageFormatException)
+        {
+            return null;
+        }
+    }
+
+    /// <summary>Each instruction in order, with the offset of its operand.</summary>
+    private static IEnumerable<(OpCode Code, int Operand)> Instructions(byte[] il)
+    {
         int at = 0;
         while (at < il.Length)
         {
@@ -91,32 +184,14 @@ internal static class CompiledStrings
                 at += 1;
             }
 
-            if (code.OperandType == OperandType.InlineString && at + 4 <= il.Length)
-            {
-                string? value = Resolve(() => method.Module.ResolveString(BitConverter.ToInt32(il, at)));
-                if (value is not null && wanted(value))
-                {
-                    pending.Add(value);
-                }
-            }
-            else if (pending.Count > 0
-                     && (code == OpCodes.Call || code == OpCodes.Callvirt || code == OpCodes.Newobj)
-                     && at + 4 <= il.Length)
-            {
-                string? callee = Resolve(() => method.Module.ResolveMethod(BitConverter.ToInt32(il, at))?.Name);
-                loaded.AddRange(pending.Select(value => (value, callee)));
-                pending.Clear();
-            }
-
+            yield return (code, at);
             at += OperandSize(code.OperandType, il, at);
         }
-
-        loaded.AddRange(pending.Select(value => (value, (string?)null)));
-        return loaded;
     }
 
     /// <summary>A metadata token resolved, or <c>null</c> when this module cannot resolve it.</summary>
-    private static string? Resolve(Func<string?> resolve)
+    private static T? Resolve<T>(Func<T?> resolve)
+        where T : class
     {
         try
         {
