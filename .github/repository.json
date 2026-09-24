@@ -1,0 +1,21 @@
+{
+  "description": "Static analysis rules for XAML markup quality — accessibility names, theme tokens, resource keys and contrast. Dependency-free, no Avalonia reference. Ships as Bennewitz.Ninja.XamlQuality and Bennewitz.Ninja.XamlQuality.ThemeAudit.",
+  "homepage": "",
+  "topics": [
+    "csharp",
+    "dotnet",
+    "nuget",
+    "xaml",
+    "avalonia",
+    "accessibility",
+    "static-analysis"
+  ],
+  "requiredChecks": [
+    "Build & Test (ubuntu-latest)",
+    "Build & Test (windows-latest)",
+    "Build & Test (macos-latest)",
+    "Pack (verify the packages build)"
+  ],
+  "content": [],
+  "undocumented": {}
+}
