@@ -8,7 +8,7 @@ released, who depends on what, and the rule backlog with any questions open for 
 | | |
 |---|---|
 | Published | `2026.3.924`: `Bennewitz.Ninja.XamlQuality` and `Bennewitz.Ninja.XamlQuality.ThemeAudit`, released 2026-09-24 beside AppServices and ScopedEditors. What it changed for a consumer is in its [release notes](https://github.com/JanusMael/Bennewitz.Ninja.XamlQuality/releases/tag/v2026.3.924) |
-| `main` | carries nothing unreleased |
+| `main` | carries the unreleased changes below |
 | Next release | Not scheduled; the developer decides. One release per calendar day |
 
 ### On `main`, not yet released
@@ -21,6 +21,7 @@ effect on a consumer, so the release that carries it can say so.
 |---|---|---|
 | `964469f` | `docs/avalonia-gotchas.md` gains two UI Automation entries from the TailBlazor port: before Avalonia 12.1.3 a list's selection reaches a Windows UIA client empty, and as of 12.1.3 a `ListBox`'s `ScrollPattern` is inert | Docs only |
 | `9bb7285` | XQ1004 measures a control where the framework's `Grid` places it: an index past the last definition in the last one, and a span across every fixed slot it crosses plus the spacing between them. A span across an `Auto` or `*` slot, or a bound index, span or spacing, is not decidable | A control that fits the slots it spans is no longer reported, which was a false positive in `2026.3.924`. A control with an out-of-range index is now measured against the last slot and may be reported. The family's markup reads the same before and after: 459 controls, 0 findings |
+| `c54c51c` | `docs/avalonia-gotchas.md` stops claiming that `XQ1001` and `XQ1002` began as its entries, and `CompatMapping`'s doc comments say the reviewed mappings ship with the library | Docs only |
 
 ## Consumers inside the family
 
@@ -76,14 +77,5 @@ None open.
 Found while this repository's directory documentation was written (plans/00003 step 8 in
 Bennewitz.Ninja.Templates) and left for this repository's own work:
 
-- The Status table's `main` row says it carries nothing unreleased, while "On `main`, not yet
-  released" lists commits.
-- `docs/avalonia-gotchas.md` says a promoted entry keeps a line naming its rule; the entries behind
-  `XQ1001` and `XQ1002` have none. Only `XQ1004`'s does.
 - The rule backlog calls a candidate `XQ1005`, though `AGENTS.md` says an id is assigned only when
-  a rule is written.
-- `FixturePaths.RepoRoot` says `theme-audit.json` and `docs/theme-audit.md` are at the repository
-  root; neither exists here. `CompatMapping`'s comments say the mappings ship with the tool; they
-  ship with the library, per `XamlQuality.csproj`.
-- The `ThemeAudit/` tests use the namespace `Bennewitz.Ninja.XamlQuality.ThemeAudit.Tests`; the
-  rest use `XamlQuality.Tests`.
+  a rule is written. It is the next rule to be written, which settles it.
