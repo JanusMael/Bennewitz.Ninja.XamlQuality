@@ -95,7 +95,7 @@ records which types are public and which stay internal.
 | File | What it is |
 |---|---|
 | `docs/avalonia-gotchas.md` | Measured Avalonia foot-guns, each with symptom, cause and fix. Moved here from ClaudeForge |
-| `docs/ai-drivable-ui.md` | TailBlazer's method for a desktop UI an agent can drive and verify, kept identical to TailBlazer's copy |
+| `docs/ai-drivable-ui.md` | The method for a desktop UI an agent can drive and verify, begun in TailBlazer. This is its one living copy; TailBlazer points here instead of keeping its own |
 | `docs/publishing.md` | Trusted publishing, the version rule, and verifying a release against the feed |
 
 The gotchas document lives beside the rules on purpose. An entry that can be checked mechanically is
@@ -209,8 +209,9 @@ dotnet pack XamlQuality.slnx -c Release -p:Version=0.0.0-local --output ./packag
 
 #### Editing the documents
 
-- `docs/ai-drivable-ui.md` is a copy of TailBlazer's `Documents/AiDrivableUi.md` and stays
-  byte-identical to it. Change it only by applying the same change to every copy.
+- `docs/ai-drivable-ui.md` is the one living copy of the guide. TailBlazer retired its own and points
+  here, so it is changed here and nowhere else; retitling or renumbering a section someone cites
+  means telling them.
 - `docs/avalonia-gotchas.md` is cited by path from other repositories, listed in `PROGRESS.md`.
   Moving it, or retitling an entry they cite, means updating them.
 - An entry that becomes mechanically checkable is promoted to a rule, as that document's header

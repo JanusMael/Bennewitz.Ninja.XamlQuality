@@ -36,6 +36,13 @@ merges only, and both give a branch's commits new hashes, so a row cites its pul
   its tests, `PropertyEditorWrapper.axaml` twice, and `DangerSurfaceMarkupTests.cs`. They rely on the
   entries about emoji-font fallback and about `AutomationProperties.Name` being ignored on a
   `TextBlock`. Moving or renaming the file or those entries means updating them.
+- **The documents in `docs/` are the only copies of themselves**, by the owner's decision of
+  2026-09-24. TailBlazer retired its copy of the guide (`8e46a8f`) and points its `CLAUDE.md` at both
+  documents here. Templates' `PROGRESS.md` links the gotchas. ClaudeForge is retiring its pre-move
+  `docs/AVALONIA-GOTCHAS.md`, 13 entries behind this one, and repointing its links here, in
+  JanusMael/ClaudeForge#80 (open on 2026-09-24).
+  bb-skills' drivable-ui skill still carries a copy of the guide, on an unmerged branch. Moving either
+  file, or retitling a section or entry someone cites, means telling them.
 - **OpenForge2k's tests**, jmui's `ClaudeForge.Tests`, pin `2026.3.924` on `main`, test-only, since
   JanusMael/ClaudeForge#77 merged on 2026-09-24, and so have the stricter XQ1001. They use
   `XamlScanContext.Load`, `ExpanderAutomationNameRule`, and `XamlRuleResult.Inspected` /
