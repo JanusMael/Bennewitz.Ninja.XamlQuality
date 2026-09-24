@@ -27,5 +27,8 @@
     <!-- Same Microsoft.Testing.Platform line as xunit.v3 3.2.2 (1.9.1); a newer TrxReport pins
          the platform above what xunit's bundled MSBuild extension can load. -->
     <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="1.9.1" />
+    <!-- The family's assembly rules, run over both assemblies this repository ships. Test-only,
+         like everything in this group: the rules library still takes no package reference. -->
+    <PackageVersion Include="Bennewitz.Ninja.AssemblyQuality" Version="2026.3.922" />
   </ItemGroup>
 </Project>
