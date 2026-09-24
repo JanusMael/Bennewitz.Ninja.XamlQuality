@@ -17,25 +17,13 @@ instrument that can actually see it, and no check is believed until it has been 
 **When the automation tree cannot answer a question honestly, the fix goes in the application —
 not in the test script.** A clever read in a harness (a raw-tree walk, a regex over a composed name,
 a pattern that happens to answer) is invisible to everyone but the next reader of that harness. An
-automation peer is part of the product: every later harness gets it free, and so does every screen
-reader.
+automation peer is part of the product: every later harness gets it free.
 
-**This is the same work as accessibility, and it should be done as that.** Everything an agent needs
-to drive a UI — a stable identity per control, an honest name, patterns that do what they advertise,
-nothing present in the tree that is not on screen — is what a screen reader needs. Treat each gap as
-an accessibility defect with a test, not as test plumbing.
-
-The harnesses read the same peers a screen reader reads, and drive them with no synthetic input, so
-"every control a harness needs has an honest peer" and "a screen reader can use this application"
-are one requirement, verified one way. A peer that advertises a pattern it does not honour fails both.
-
-**From Avalonia 12, the same peers reach Linux.** `Avalonia.FreeDesktop.AtSpi` publishes them on the
-AT-SPI bus, one node per `AutomationPeer`, and an application built on `Avalonia.Desktop` carries it
-through `Avalonia.X11`, which starts it with the application. nuget.org lists it from 12.0.0-preview2
-and in no 11.x release. So the peers these rules ask for serve Linux screen readers as well as
-Windows UI Automation clients. **That the surface exists there is read from the source; that a
-harness can drive it over AT-SPI has not been verified.** Every harness behind this method drives
-Windows UI Automation.
+**Everything an agent needs to drive a UI is part of the application**: a stable identity per
+control, an honest name, patterns that do what they advertise, nothing present in the tree that is
+not on screen. Treat each gap as a defect in the application, with a test, not as test plumbing.
+Fill in what a screen reader would read as well: a control's `Name`, not only the `AutomationId` a
+harness finds it by (rule 2). Nothing in this method tests screen-reader use.
 
 **Why it is not a preference**: in TailBlazer every one of these gaps produced a *false result*
 before it was closed — a number that looked like a defect in the application and was an artefact
@@ -48,6 +36,13 @@ of how it was read.
 | `ListBox` advertised `SelectionPattern`; `GetSelection()` returned nothing | "No row selected" while the row was visibly painted selected |
 | `ListBox` advertised `ScrollPattern`; every value was 0 or -1 and `Scroll()` did nothing | Every scroll harness failed for a reason unrelated to scrolling |
 | A collapsed pane stayed in the tree at full size | A harness reported a pane present that no user could see |
+
+**From Avalonia 12, the same peers are published on Linux.** `Avalonia.FreeDesktop.AtSpi` puts them
+on the AT-SPI bus, one node per `AutomationPeer`, and an application built on `Avalonia.Desktop`
+carries it through `Avalonia.X11`, which starts it with the application. nuget.org lists it from
+12.0.0-preview2 and in no 11.x release. **That they are published is read from the source; that a
+harness can drive them over AT-SPI has not been verified.** Every harness behind this method drives
+Windows UI Automation.
 
 ---
 
@@ -98,7 +93,7 @@ wrong finding the TailBlazer port ever published.
 | Instrument | Answers | Blind to |
 |---|---|---|
 | **Layout bounds** (`Visual.Bounds`, `ActualWidth`) — in a headless fixture | Where layout put a control, relative to its **parent** | Paint, clipping, and anything relative to the window unless you translate |
-| **The automation peer's bounding rectangle** — in a runtime harness | What a screen reader or a harness perceives | Clipping: **a clipped control keeps its full rectangle** |
+| **The automation peer's bounding rectangle** — in a runtime harness | What a harness perceives | Clipping: **a clipped control keeps its full rectangle** |
 | **A capture** — `PrintWindow` with `PW_RENDERFULLCONTENT`, or headless rendering | What actually reached the pixels | Anything not drawn |
 
 - A claim about **what is drawn** needs a capture. A property assertion is not a pixel: unwiring a
