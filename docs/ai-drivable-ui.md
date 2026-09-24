@@ -155,6 +155,9 @@ the same state: it was never activated.
    desktop: an unscoped search for a control named `Close` found and invoked **a button in another
    application**. When a popup must be found from the root, AND in the process id. (PowerShell:
    never name the variable `$pid` — that is the harness's own process.)
+   Never search `RootElement` with `TreeScope.Descendants`: it visits every application on the
+   desktop, so a harness's time measures what else is open. One first search took 17 s, and one
+   harness ran 94 s on a quiet desktop and 406 s on a busy one, with the same code.
 4. **Scope to the container that owns the part.** Template part names (`PART_VerticalScrollBar`) are
    shared by every scroll viewer in the window; take the one inside the list you mean, never the
    first in the window.
@@ -177,12 +180,27 @@ the same state: it was never activated.
 12. **Count pixels by structure, not by colour alone.** ClearType fringing makes a raw coloured-pixel
     count meaningless; count scanlines at least 60% filled, or compare two regions of the same row,
     and make any blankness guard sample the same pixels the assertion reads.
+13. **Read many elements through a `CacheRequest`.** Reading `.Current` on each list row makes two
+    cross-process calls per row, each waiting on the application's UI thread; cache `Name` and
+    `BoundingRectangle` and fetch them in one call. One harness went from 250 s to 166 s, with
+    identical readings.
 
 **Keep harness windows out of the person's way**: when a harness environment variable is set, the
 application parks its window against a screen edge and sends it to the bottom of the Z-order once it
 has a handle (`SetWindowPos(HWND_BOTTOM, NOMOVE|NOSIZE|NOACTIVATE)`), for **every** window it opens,
 through one helper. Windows clamps a top-level window back on screen, so "off screen" is not
 available; parking plus Z-order is. Leave an opt-out for harnesses that need the foreground.
+
+**And make the parked window impossible to activate: add `WS_EX_NOACTIVATE`.** Opening without
+activation (`ShowActivated = false`) only stops the window activating itself. When the person's own
+window closes or minimises and nothing of theirs sits above the harness window, Windows hands
+activation to the next window down the Z-order, and in TailBlazer a harness window took keyboard
+focus that way now and then, with nothing asking for it. `WS_EX_NOACTIVATE` in the extended style
+(`SetWindowLongPtr(GWL_EXSTYLE, …)`) is the flag Windows skips when it chooses, and it also stops a
+click from activating the window. Harnesses that drive through automation patterns never need
+activation, so set it on every parked window the application owns, never on one opened under the
+foreground opt-out. **A modal dialog is the one case it cannot cover**: `ShowDialog` activates its
+window whatever it is asked, so a harness that opens one takes focus once per dialog.
 
 **Resize without taking focus**: `SetWindowPos(..., SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE)`.
 
