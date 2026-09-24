@@ -1,4 +1,4 @@
-namespace Bennewitz.Ninja.XamlQuality.ThemeAudit.Tests;
+namespace XamlQuality.Tests.ThemeAudit;
 
 /// <summary>Locates the committed fixtures under this test project, and the repository root, from the runtime directory.</summary>
 internal static class FixturePaths
@@ -20,7 +20,7 @@ internal static class FixturePaths
         return Path.Combine(FindUp(ProjectMarker), "ThemeAudit", "Fixtures", name);
     }
 
-    /// <summary>The repository root — where <c>theme-audit.json</c> and <c>docs/theme-audit.md</c> live.</summary>
+    /// <summary>The repository root, found by walking up to <c>XamlQuality.slnx</c>.</summary>
     public static string RepoRoot => FindUp(RepoMarker);
 
     private static string FindUp(string marker)

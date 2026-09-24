@@ -1,6 +1,6 @@
 using Bennewitz.Ninja.XamlQuality.ThemeAudit;
 
-namespace Bennewitz.Ninja.XamlQuality.ThemeAudit.Tests;
+namespace XamlQuality.Tests.ThemeAudit;
 
 /// <summary>
 /// The configured audit end to end on the committed fixture under <c>Fixtures/audit</c>: a host

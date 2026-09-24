@@ -1,6 +1,6 @@
 using Bennewitz.Ninja.XamlQuality.ThemeAudit;
 
-namespace Bennewitz.Ninja.XamlQuality.ThemeAudit.Tests;
+namespace XamlQuality.Tests.ThemeAudit;
 
 /// <summary>
 /// The Semi-shaped case the flat model could not handle: a shared include carries a nested
