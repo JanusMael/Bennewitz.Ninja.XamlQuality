@@ -20,6 +20,7 @@ effect on a consumer, so the release that carries it can say so.
 | Commit | Change | Effect on a consumer |
 |---|---|---|
 | `964469f` | `docs/avalonia-gotchas.md` gains two UI Automation entries from the TailBlazor port: before Avalonia 12.1.3 a list's selection reaches a Windows UIA client empty, and as of 12.1.3 a `ListBox`'s `ScrollPattern` is inert | Docs only |
+| `9bb7285` | XQ1004 measures a control where the framework's `Grid` places it: an index past the last definition in the last one, and a span across every fixed slot it crosses plus the spacing between them. A span across an `Auto` or `*` slot, or a bound index, span or spacing, is not decidable | A control that fits the slots it spans is no longer reported, which was a false positive in `2026.3.924`. A control with an out-of-range index is now measured against the last slot and may be reported. The family's markup reads the same before and after: 459 controls, 0 findings |
 
 ## Consumers inside the family
 
@@ -36,14 +37,14 @@ effect on a consumer, so the release that carries it can say so.
   `feat/scopededitors-stage-two`, open as PR #77, moves them to `2026.3.924`, which brings them the
   stricter XQ1001. They use `XamlScanContext.Load`, `ExpanderAutomationNameRule`, and
   `XamlRuleResult.Inspected` / `.Findings`.
-- **DiffView** intends to adopt XQ1003. Its adoption plan, still a draft, floors `Inspected` at 20,
-  deliberately below its population of 33, now 34 with `1d9ccac`: the floor guards the silent
-  `Clean(0)` of a scan handed no assemblies, not a part count, so `2026.3.924` needs no edit there.
-  It declined to promote its inline part name to a public constant, which `1d9ccac` made unnecessary.
-  It is folding the `2026.3.924` upgrade and the digest fix into its plan 00025, and will report
-  whether its regenerated report's digest matches the predicted `b7ea0ec438c5`; a different value
-  would mean the diagnosis was incomplete. It proposed the peer check, which is second in the
-  backlog's order.
+- **DiffView**'s tests adopt XQ1003 and XQ1004 on `2026.3.924`, by its own report on 2026-09-24 of
+  an upgrade not yet on GitHub. XQ1003 reads 34 against a floor of 20, deliberately below its
+  population: the floor guards the silent `Clean(0)` of a scan handed no assemblies, not a part
+  count. It asserts XQ1003's `Skipped` subjects are exactly `DiffPaneHeader` and `DiffStatusStrip`,
+  keyed on `XamlSkip.Subject` rather than the prose `Reason`, so narrowing either breaks it. XQ1004
+  inspects 22 controls with no findings. Its regenerated audit report's digest came out at the
+  predicted `b7ea0ec438c5`, with nothing but digests moving, so `4f7bd62`'s diagnosis was complete.
+  It proposed the peer check, which is second in the backlog's order.
 
 ## Rule backlog
 
