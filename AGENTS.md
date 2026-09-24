@@ -1,15 +1,121 @@
-# AGENTS.md — invariants and checklists for XamlQuality
+# AGENTS.md — XamlQuality
 
-> Audience: an agent (Claude or otherwise) returning to this repository cold. Purpose: the contracts
-> a single-file read does not show, so a change does not break one by accident. The narrative, what
-> the repository is and why it is shaped this way, is in [`CLAUDE.md`](./CLAUDE.md). Work state is
-> [`PROGRESS.md`](./PROGRESS.md).
+> For anyone changing this repository, human or agent. The first half is the shape of the
+> repository and the reasoning behind it; the second, under **Operational rules**, is the
+> invariants a change must not break, each tied to what guards it, plus the commands and the
+> checklists for recurring work. Where the two disagree, the operational rules are the enforceable
+> ones. Each top-level directory has an `AGENTS.md` of its own for what only its files show.
+>
+> Work state lives in [`PROGRESS.md`](./PROGRESS.md), updated in the same change as the work it
+> describes: what is published, what is on `main` and not yet released, who depends on what, the
+> rule backlog, and the questions open for the developer. What every repository in this family
+> carries, and how it is checked, is prescribed in
+> [`docs/repository-conventions.md`](https://github.com/JanusMael/Bennewitz.Ninja.Templates/blob/main/docs/repository-conventions.md)
+> in Bennewitz.Ninja.Templates.
 
-This file is **fact-shaped**: every claim cites a file, a type, a member or a test, so drift surfaces
+## What this repository is
+
+Static analysis for XAML markup, shipped as two packages from one tag:
+
+| Package | Project | What it is |
+|---|---|---|
+| `Bennewitz.Ninja.XamlQuality` | `src/XamlQuality` | The rules library: `IXamlRule` implementations a consumer runs from its own tests |
+| `Bennewitz.Ninja.XamlQuality.ThemeAudit` | `src/XamlQuality.ThemeAudit` | The `theme-audit` dotnet tool: argument parsing and reporting over the library's `ThemeAudit` namespace |
+
+The rules began as guards hand-rolled inside applications and copied from one to the next, each copy
+having learned a different subset of the cases. Extracting them was the point. `XQ1001` and `XQ1002`
+each turned out stricter than the guard it replaced, in ways nobody predicted: the guard behind
+`XQ1001` had passed `AutomationProperties.Name=""` for months.
+
+## Three design commitments
+
+**A rule reports; it never asserts.** `IXamlRule.Analyze` returns an `XamlRuleResult`, findings
+rather than exceptions, so nothing in the library references a test framework. The consumer picks
+the runner and the severity: the same finding can fail an xUnit test, warn in CI or print in a
+report.
+
+**No dependencies, Avalonia included.** Rules read markup as text or XML. Where a contract has a
+compiled half, a rule reads the consumer's own assemblies through `System.Reflection`. The library
+works against WPF and MAUI markup as it does against Avalonia's. Only the notes in `docs/` are
+Avalonia-specific, and that split is deliberate.
+
+**Zero findings is not a result on its own.** A rule whose selector stops matching reports nothing
+and looks exactly like a clean codebase. So every result carries `Inspected`, how much the rule
+examined, and `Skipped`, which names what it saw but could not check. A consumer asserts on all
+three.
+
+## How a scan works
+
+`XamlScanContext.Load(root)` reads every `.axaml` and `.xaml` file under a root once, skips `bin`
+and `obj`, and sorts the files so findings are stable from run to run. Each `XamlFile` offers its raw
+`Text` and its parsed `Document`, because some rules ask about structure and others about spelling.
+A file that does not parse carries a `ParseError` instead of disappearing. `WithAssemblies` returns
+a new context that also carries compiled assemblies, for the rules that need them.
+
+The rules live in `src/XamlQuality/Rules`, and the README's generated table lists every one. These
+are the ones that shaped the design:
+
+- **`XQ1001` and `XQ1002`** require a non-empty `AutomationProperties.Name`, in either spelling,
+  through the shared `AutomationName` helper. `XQ1002` covers what a keyboard can reach and leaves
+  `Expander` to `XQ1001`, so a consumer runs both.
+- **`XQ1003`** reads the `PART_` names a control's compiled code looks up, and requires each in that
+  control's own `ControlTheme`. A misspelt part fails silently at runtime, and no compiler can see
+  it, because the two halves are in different languages. The literals come from IL, through
+  `CompiledStrings`, because a string passed straight to a lookup exists only as an instruction in
+  a method body.
+- **`XQ1004`** reports a control whose declared size exceeds the fixed Grid row or column it sits in.
+  It asks about the automation tree, which clipping never changes, and that is what keeps it
+  decidable from markup.
+
+There is no rule registry: a consumer constructs each rule by name. That makes the README's rules
+table the only enumeration of the rules anywhere, which is why a test generates it from the rule
+types rather than trusting anyone to add the row.
+
+## ThemeAudit
+
+The `ThemeAudit` namespace inventories the resource keys a theme defines and scans consumers for the
+keys they reference. It reports what a theme leaves undefined, and which colour pairs fall below a
+contrast floor. It also generates compat dictionaries: the keys one theme defines and another lacks,
+mapped onto the latter's tokens. The reviewed mappings ship as `Mappings/*.json` beside the library.
+`AuditRunner.Run` is the entry point. Each theme and consumer carries a content digest, so a
+committed report changes when what was audited changes, and only then.
+
+This analysis moved here from DiffView, and its surface shipped public. DiffView binds to it, so
+narrowing it is a breaking change rather than a tidy-up. `src/XamlQuality/Properties/AssemblyInfo.cs`
+records which types are public and which stay internal.
+
+## The documents in `docs/`
+
+| File | What it is |
+|---|---|
+| `docs/avalonia-gotchas.md` | Measured Avalonia foot-guns, each with symptom, cause and fix. Moved here from ClaudeForge |
+| `docs/ai-drivable-ui.md` | TailBlazer's method for a desktop UI an agent can drive and verify, kept identical to TailBlazer's copy |
+| `docs/publishing.md` | Trusted publishing, the version rule, and verifying a release against the feed |
+
+The gotchas document lives beside the rules on purpose. An entry that can be checked mechanically is
+promoted to a rule, and the entry keeps a line pointing at the rule's id. `XQ1001`, `XQ1002` and
+`XQ1004` all began as entries there. Other repositories contribute entries by message and cite the
+document by path.
+
+## Who consumes this
+
+Other repositories in the same family consume both packages. ScopedEditors' tests run the rules, and
+DiffView runs the audit and commits its report. That is why the public surface is treated as a
+contract. `PROGRESS.md` lists which members each consumer uses.
+
+## Releases
+
+The release workflow publishes through nuget.org trusted publishing (OIDC), so no API key exists.
+The version is the tag, in the family's `YYYY.Q.MMDD` form. That allows one release per calendar
+day, and a published version can never be replaced. `docs/publishing.md` is the runbook.
+
+## Operational rules
+
+This half is **fact-shaped**: every claim cites a file, a type, a member or a test, so drift surfaces
 as a missing symbol under `grep` rather than as stale prose. No source-line numbers, no dates, no
 counts.
 
-## 1. Hard invariants
+### 1. Hard invariants
 
 | Invariant | Failure signature if broken | Canonical source |
 |---|---|---|
@@ -40,7 +146,7 @@ counts.
 | The release names each package it publishes; no step globs `*.nupkg` | A future packable project is published permanently, or attached to a GitHub Release nobody chose it for | `.github/workflows/release.yml`; tests `ReleaseWorkflowTests.The_release_workflow_names_every_package_it_publishes`, `ReleaseWorkflowTests.The_release_workflow_still_has_both_publishing_steps` |
 | `NUGET_USER` is a repository variable holding the nuget.org profile name, and a release refuses to run without it | A masked value hides why a login fails, and a tag with it unset creates a GitHub Release for a package that never shipped | `.github/workflows/release.yml`, step `Refuse to release without NUGET_USER`; `docs/publishing.md` |
 
-## 2. Commands
+### 2. Commands
 
 ```bash
 dotnet build XamlQuality.slnx -c Release
@@ -58,9 +164,9 @@ dotnet pack XamlQuality.slnx -c Release -p:Version=0.0.0-local --output ./packag
 - Warnings are errors (`Directory.Build.props`), and CI builds and tests on Linux, Windows and macOS
   because the rules compare paths (`.github/workflows/ci.yml`).
 
-## 3. Checklists
+### 3. Checklists
 
-### Adding a rule
+#### Adding a rule
 
 1. A public sealed class in `src/XamlQuality/Rules/` implementing `IXamlRule`, with a parameterless
    constructor. Take the next free `XQ` id. Ids are permanent and assigned only when a rule is
@@ -81,7 +187,7 @@ dotnet pack XamlQuality.slnx -c Release -p:Version=0.0.0-local --output ./packag
    id.
 9. Add it to `PROGRESS.md`'s unreleased list, with its effect on a consumer.
 
-### Changing a rule or the audit
+#### Changing a rule or the audit
 
 - A rule that becomes stricter turns a consumer's green markup red on their next upgrade. Record it
   in `PROGRESS.md`'s unreleased list, under "Effect on a consumer".
@@ -89,7 +195,7 @@ dotnet pack XamlQuality.slnx -c Release -p:Version=0.0.0-local --output ./packag
   regenerate theirs. Record that too.
 - Keep `src/XamlQuality/Properties/AssemblyInfo.cs` accurate when a type's visibility changes.
 
-### Editing the documents
+#### Editing the documents
 
 - `docs/ai-drivable-ui.md` is a copy of TailBlazer's `Documents/AiDrivableUi.md` and stays
   byte-identical to it. Change it only by applying the same change to every copy.
@@ -98,7 +204,7 @@ dotnet pack XamlQuality.slnx -c Release -p:Version=0.0.0-local --output ./packag
 - An entry that becomes mechanically checkable is promoted to a rule, as that document's header
   requires.
 
-### Releasing
+#### Releasing
 
 - A tag publishes permanently. Tag only when the developer has decided to release.
 - Follow `docs/publishing.md`: tag `vYYYY.Q.MMDD`, one release per calendar day, verify against the

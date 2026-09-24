@@ -14,7 +14,8 @@
     "Build & Test (ubuntu-latest)",
     "Build & Test (windows-latest)",
     "Build & Test (macos-latest)",
-    "Pack (verify the packages build)"
+    "Pack (verify the packages build)",
+    "conventions"
   ],
   "content": [],
   "undocumented": {}
