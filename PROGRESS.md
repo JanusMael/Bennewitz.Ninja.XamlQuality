@@ -70,3 +70,20 @@ startup assertion or a headless test.
 ## Questions for the developer
 
 None open.
+
+## Follow-ups
+
+Found while this repository's directory documentation was written (plans/00003 step 8 in
+Bennewitz.Ninja.Templates) and left for this repository's own work:
+
+- The Status table's `main` row says it carries nothing unreleased, while "On `main`, not yet
+  released" lists commits.
+- `docs/avalonia-gotchas.md` says a promoted entry keeps a line naming its rule; the entries behind
+  `XQ1001` and `XQ1002` have none. Only `XQ1004`'s does.
+- The rule backlog calls a candidate `XQ1005`, though `AGENTS.md` says an id is assigned only when
+  a rule is written.
+- `FixturePaths.RepoRoot` says `theme-audit.json` and `docs/theme-audit.md` are at the repository
+  root; neither exists here. `CompatMapping`'s comments say the mappings ship with the tool; they
+  ship with the library, per `XamlQuality.csproj`.
+- The `ThemeAudit/` tests use the namespace `Bennewitz.Ninja.XamlQuality.ThemeAudit.Tests`; the
+  rest use `XamlQuality.Tests`.
