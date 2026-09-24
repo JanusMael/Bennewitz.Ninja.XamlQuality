@@ -7,26 +7,17 @@ released, who depends on what, and the rule backlog with any questions open for 
 
 | | |
 |---|---|
-| Published | `2026.3.922`: `Bennewitz.Ninja.XamlQuality` and `Bennewitz.Ninja.XamlQuality.ThemeAudit` |
-| `main` | carries the unreleased changes below |
-| Next release | `v2026.3.924` on 2026-09-24, tagged beside AppServices and ScopedEditors and carrying `main` as it stands; the backlog's rules ship in later releases. AssemblyQuality runs over both assemblies as tests (`AssemblyQualityTests`), clean against its `2026.3.922`. Decided 2026-09-23 |
+| Published | `2026.3.924`: `Bennewitz.Ninja.XamlQuality` and `Bennewitz.Ninja.XamlQuality.ThemeAudit`, released 2026-09-24 beside AppServices and ScopedEditors. What it changed for a consumer is in its [release notes](https://github.com/JanusMael/Bennewitz.Ninja.XamlQuality/releases/tag/v2026.3.924) |
+| `main` | carries nothing unreleased |
+| Next release | Not scheduled; the developer decides. One release per calendar day |
 
 ### On `main`, not yet released
 
-Every change after the `v2026.3.922` tag (`5d49915`) that a consumer can see; this repository's own
-working documents are left out. Most of it makes a rule stricter or adds API, so the release that
-carries it has to say so.
+Every change after the `v2026.3.924` tag (`808346b`) that a consumer can see; this repository's own
+working documents are left out. A change that makes a rule stricter or adds API goes here with its
+effect on a consumer, so the release that carries it can say so.
 
-| Commit | Change | Effect on a consumer |
-|---|---|---|
-| `4f7bd62`, merged as `f7eaf8a` | ThemeAudit's content digest hashes each file's path relative to the scanned set's common ancestor, not the configuration's directory | A committed report rebases once, so a consumer regenerates it on upgrade. **DiffView's digest test fails on every CI leg until then.** A dependency resolved to a sibling checkout locally and to a fetched copy on CI produced two digests for the same files. DiffView predicts `b7ea0ec438c5` in both layouts afterwards, measured on a source build. Its macOS and Windows legs also fail DiffView's own image snapshots, which no release here touches |
-| `1e84319` | **XQ1004**, a new rule: a control whose declared minimum or fixed size exceeds the fixed Grid row or column it sits in | New findings wherever a consumer adopts it |
-| `99299ec` | XQ1001 and XQ1002 reject an empty `<AutomationProperties.Name>` element, whether open-and-closed, self-closing or whitespace only | Markup that passed may now fail |
-| `1d9ccac` | XQ1003 reads part names from compiled code: constants whether public or not, and `PART_` literals passed to a `Find*` or `Get*` lookup, across non-public types and lambdas | More parts are inspected. DiffView measures 33 → 34, with no findings |
-| `1d9ccac` | `XamlSkip` and `XamlRuleResult.Skipped` name what a rule saw but could not check; XQ1003 fills it | New public API, additive |
-| `52e481c` | XQ1003 given no assemblies names every themed control as skipped, instead of reporting a silent 0 | A scan that forgot `WithAssemblies` now says so |
-| `e92fb92`, `8154f78` | `docs/ai-drivable-ui.md`, TailBlazer's guide to a UI an agent can drive and verify, kept byte-identical to TailBlazer's copy | Docs only |
-| `621dab8` … `d80e53b` | `docs/avalonia-gotchas.md` arrives from ClaudeForge and grows: layout clip, focus and key bindings, context menus, pressing keys headlessly, the property-metadata trap, trimming, and the four ways an `avares://` URI fails | Docs only |
+Nothing yet.
 
 ## Consumers inside the family
 
@@ -34,19 +25,23 @@ carries it has to say so.
   `InteractiveAutomationNameRule(additionalElements)`, `ExpanderAutomationNameRule`,
   `XamlScanContext.Load`, `XamlFile.RelativePath` / `.Text` / `.ParseError`, and
   `XamlRuleResult.Inspected` / `.Findings`. Narrowing any of them breaks ScopedEditors once it moves
-  off `2026.3.922`.
+  off `2026.3.922`, and moving to `2026.3.924` brings it the stricter XQ1001 and XQ1002.
 - **ScopedEditors cites `docs/avalonia-gotchas.md` by path**, in `AppSeverityToGlyphConverter.cs` and
   its tests, `PropertyEditorWrapper.axaml` twice, and `DangerSurfaceMarkupTests.cs`. They rely on the
   entries about emoji-font fallback and about `AutomationProperties.Name` being ignored on a
   `TextBlock`. Moving or renaming the file or those entries means updating them.
 - **OpenForge2k's tests**, jmui's `ClaudeForge.Tests`, pin `2026.3.921`, test-only, on `main` and on
   `feat/scopededitors-stage-two`. They use `XamlScanContext.Load`, `ExpanderAutomationNameRule`, and
-  `XamlRuleResult.Inspected` / `.Findings`. The stricter XQ1001 in `99299ec` reaches them on their
-  next upgrade.
-- **DiffView** intends to adopt XQ1003 at 33 inspected against `2026.3.922`, raising its floor to 34
-  once a release carries `1d9ccac`. It declined to promote its inline part name to a public constant,
-  which `1d9ccac` made unnecessary. Its adoption plan is still a draft. It proposed the peer check,
-  which is second in the backlog's order.
+  `XamlRuleResult.Inspected` / `.Findings`. The stricter XQ1001 reaches them when they move to
+  `2026.3.924`.
+- **DiffView** intends to adopt XQ1003. Its adoption plan, still a draft, floors `Inspected` at 20,
+  deliberately below its population of 33, now 34 with `1d9ccac`: the floor guards the silent
+  `Clean(0)` of a scan handed no assemblies, not a part count, so `2026.3.924` needs no edit there.
+  It declined to promote its inline part name to a public constant, which `1d9ccac` made unnecessary.
+  It is folding the `2026.3.924` upgrade and the digest fix into its plan 00025, and will report
+  whether its regenerated report's digest matches the predicted `b7ea0ec438c5`; a different value
+  would mean the diagnosis was incomplete. It proposed the peer check, which is second in the
+  backlog's order.
 
 ## Rule backlog
 
