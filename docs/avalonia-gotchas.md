@@ -475,6 +475,24 @@ The `/template/` combinator is not optional — a selector without it does not r
 
 ⭐ **Related:** `CopyFromScreen` captures the **physical screen**, so screenshotting a background window silently yields whatever is on top of it — for one run here, the editor that launched the harness. Force the window foreground first (`ShowWindow` + `SetWindowPos` topmost + `SetForegroundWindow`) or treat the UIA dump, not the image, as the evidence.
 
+### Before 12.1.3, a list's selection reaches a Windows UIA client EMPTY — and no headless test can show it
+
+**Symptom:** A UI Automation client asks a list what is selected and gets nothing. `SelectionPattern.GetCurrentSelection()` returns 0 items while a row is selected, painted, and its own `SelectionItemPattern.IsSelected` reads True. Every selecting control on Windows, in Avalonia 12.0.0 through 12.1.2.
+
+**Cause:** The peers are right; the array is lost on its way to the client. `SafeArrayRef.CreateFromObjects` sized the SAFEARRAY to the buffer it rented from `ArrayPool` rather than to the selection, so a one-item selection became a 16-slot array, and it filled a slot only when `ComWrappers.TryGetComInstance` succeeded, which it never does for Avalonia's plain managed peers. The client received an array of nulls. A `ComboBox` hides this, because it also exposes `ValuePattern` with the selected text; a `ListBox` has no such fallback. The same path carried `ITableProvider`'s row and column headers, `ITableItemProvider`, and `ITextProvider`'s selection and visible ranges, so those came back empty too. Fixed upstream in [AvaloniaUI/Avalonia#22151](https://github.com/AvaloniaUI/Avalonia/pull/22151), released in 12.1.3.
+
+⛔ **A headless fixture cannot catch it.** The headless platform never goes through the Win32 marshalling where the bug lived. Measured on the TailBlazer port: `headless=1, live=0` with the same peer. A green headless test says nothing about what a screen reader or a UIA-driven test sees on Windows.
+
+**Fix:** Avalonia 12.1.3 or later. From `2026.3.924`, `Bennewitz.Ninja.AppServices.Avalonia` and `Bennewitz.Ninja.ScopedEditors.Avalonia` require it, so a host that references Avalonia directly at an earlier version fails restore with `NU1605` until it raises that reference.
+
+### A `ListBox` advertises `ScrollPattern`, but its scroll provider never resolves — unfixed as of 12.1.3
+
+**Symptom:** A UIA client scrolls a list through the list, and nothing happens. The `ListBox` advertises `ScrollPattern`, yet answers `VerticallyScrollable=False`, `VerticalScrollPercent=-1` and `VerticalViewSize=0`, and `Scroll()` and `SetScrollPercent()` do nothing. Measured on the TailBlazer port, headless and live on Windows. The list's own `ScrollViewer` peer answers correctly: `True`, `0`, and the real view size.
+
+**Cause:** In `ItemsControlAutomationPeer`, every `IScrollProvider` member reads a private `_scroller` field, and the only assignment to it is inside the `protected virtual Scroller` getter, which nothing in `ItemsControlAutomationPeer`, `SelectingItemsControlAutomationPeer` or `ListBoxAutomationPeer` calls. The field stays null, so every member falls back to its default. The same getter holds a second defect: it marks the search done even when `ListBox.Scroll` is still null, so a peer created before its template is applied would stay inert even if the getter were called. Read in Avalonia's source at tag 12.1.3. Reported upstream as [AvaloniaUI/Avalonia#22038](https://github.com/AvaloniaUI/Avalonia/issues/22038), which its author closed without a fix.
+
+**Fix:** Drive scrolling through the `ScrollViewer`'s peer, or through the scrollbar's `RangeValue` pattern, never through the list's `ScrollPattern`. A test that reads the list's scroll values is reading constants.
+
 ### A `ListBox` is NOT focusable, so `Focus()` on one is a silent no-op
 
 **Symptom:** A `KeyBinding` on a list never fires. The chord reads as unbound — no exception, no log line, nothing in the binding diagnostics.
