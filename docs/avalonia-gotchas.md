@@ -5,6 +5,9 @@ next AI session — does not rediscover them. Each entry gives the symptom, the 
 
 Scope is Avalonia 12 on .NET 10, plus Semi.Avalonia wherever a theme is involved.
 
+Its companion is [ai-drivable-ui.md](ai-drivable-ui.md), the method for making a desktop UI that an
+agent can drive and verify through its automation tree.
+
 ⭐ **An entry that can be checked mechanically belongs as a RULE in this library, not as prose
 here.** `XQ1001` and `XQ1002` both began as entries below, and each turned out to be stricter than
 the hand-rolled guard it replaced in ways nobody predicted. Prose is for what a markup scan cannot
