@@ -9,7 +9,7 @@ released, who depends on what, and the rule backlog with any questions open for 
 |---|---|
 | Published | `2026.3.922`: `Bennewitz.Ninja.XamlQuality` and `Bennewitz.Ninja.XamlQuality.ThemeAudit` |
 | `main` | carries the unreleased changes below |
-| Next release | `v2026.3.924` on 2026-09-24, tagged beside AppServices and ScopedEditors and carrying `main` as it stands; the backlog's rules ship in later releases. AssemblyQuality runs over both packages' assemblies before the tag. Decided 2026-09-23 |
+| Next release | `v2026.3.924` on 2026-09-24, tagged beside AppServices and ScopedEditors and carrying `main` as it stands; the backlog's rules ship in later releases. AssemblyQuality runs over both assemblies as tests (`AssemblyQualityTests`), clean against its `2026.3.922`. Decided 2026-09-23 |
 
 ### On `main`, not yet released
 

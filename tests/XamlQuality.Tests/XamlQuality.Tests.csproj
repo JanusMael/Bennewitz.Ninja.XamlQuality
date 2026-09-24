@@ -1,6 +1,13 @@
 <Project Sdk="Microsoft.NET.Sdk">
   <!-- Framework packages, IsTestProject and OutputType all come from tests/Directory.Build.props. -->
   <ItemGroup>
-    <ProjectReference Include="..\..\src\XamlQuality\XamlQuality.csproj" />
+    <ProjectReference Include="../../src/XamlQuality/XamlQuality.csproj" />
+    <!-- Referenced so ThemeAudit.dll lands in the test output, where AssemblyQualityTests scans it
+         beside the library. -->
+    <ProjectReference Include="../../src/XamlQuality.ThemeAudit/XamlQuality.ThemeAudit.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Bennewitz.Ninja.AssemblyQuality" />
   </ItemGroup>
 </Project>
