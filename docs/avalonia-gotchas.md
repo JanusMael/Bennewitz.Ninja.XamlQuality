@@ -9,10 +9,11 @@ Its companion is [ai-drivable-ui.md](ai-drivable-ui.md), the method for making a
 agent can drive and verify through its automation tree.
 
 ⭐ **An entry that can be checked mechanically belongs as a RULE in this library, not as prose
-here.** `XQ1001` and `XQ1002` both began as entries below, and each turned out to be stricter than
-the hand-rolled guard it replaced in ways nobody predicted. Prose is for what a markup scan cannot
-see — template internals, runtime behaviour, platform differences. When an entry becomes checkable,
-promote it and leave a line here pointing at the rule id.
+here.** `XQ1004` began as an entry below. `XQ1001` and `XQ1002` began as guards hand-rolled in
+application test suites, and each turned out to be stricter than the guard it replaced in ways
+nobody predicted. Prose is for what a markup scan cannot see — template internals, runtime
+behaviour, platform differences. When an entry becomes checkable, promote it and leave a line here
+pointing at the rule id.
 
 ⚠ **This document is Avalonia-specific; the library hosting it deliberately is not.** The rules read
 markup as XML and work against WPF and MAUI just as well — see the [README](../README.md). Keeping

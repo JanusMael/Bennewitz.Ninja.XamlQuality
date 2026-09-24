@@ -6,7 +6,7 @@ namespace Bennewitz.Ninja.XamlQuality.ThemeAudit;
 /// <summary>
 /// The reviewed table behind a compat dictionary: which of the source theme's variants feeds
 /// each target variant, which keys map onto the target theme's own tokens, which are left out,
-/// and what the generator may copy verbatim. Ships with the tool under <c>Mappings/</c> and is
+/// and what the generator may copy verbatim. Ships with the library under <c>Mappings/</c> and is
 /// overridable per run by pointing the configuration at another file.
 /// </summary>
 public sealed class CompatMapping
@@ -68,8 +68,8 @@ public sealed class CompatMapping
 
     /// <summary>
     /// Finds a mapping by the configuration's value: a path relative to the configuration, or
-    /// the bare name of one shipped with the tool (<c>FluentToSemi</c>) under <c>Mappings/</c>
-    /// beside the executable.
+    /// the bare name of one shipped with the library (<c>FluentToSemi</c>) under <c>Mappings/</c>
+    /// in the application's base directory, where the package copies them.
     /// </summary>
     public static string Locate(AuditConfig config, string mapping)
     {

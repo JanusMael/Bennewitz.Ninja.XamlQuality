@@ -93,9 +93,9 @@ records which types are public and which stay internal.
 | `docs/publishing.md` | Trusted publishing, the version rule, and verifying a release against the feed |
 
 The gotchas document lives beside the rules on purpose. An entry that can be checked mechanically is
-promoted to a rule, and the entry keeps a line pointing at the rule's id. `XQ1001`, `XQ1002` and
-`XQ1004` all began as entries there. Other repositories contribute entries by message and cite the
-document by path.
+promoted to a rule, and the entry keeps a line pointing at the rule's id, as `XQ1004`'s does.
+`XQ1001` and `XQ1002` began as guards hand-rolled in application test suites, not as entries.
+Other repositories contribute entries by message and cite the document by path.
 
 ## Who consumes this
 
