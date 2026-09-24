@@ -400,4 +400,32 @@ public sealed class TemplatePartRuleTests : IDisposable
 
         Assert.DoesNotContain(Run().Skipped, s => s.Subject == nameof(ProxyPanel));
     }
+
+    /// <summary>
+    /// ⛔ DiffView's catch. A scan copied without <c>WithAssemblies</c> reads no parts, and used to
+    /// say only "0 inspected", which reads as success. Every themed control is named as skipped.
+    /// </summary>
+    [Fact]
+    public void WithoutAssemblies_EveryThemedControlIsNamedAsSkipped()
+    {
+        Write("Bad.axaml", Theme("t:ProxyPanel", "<Border Name=\"PART_Header\" />"));
+
+        XamlRuleResult result = RunWithoutTypes();
+
+        Assert.Empty(result.Findings);
+        Assert.Equal(0, result.Inspected);
+        XamlSkip skip = Assert.Single(result.Skipped);
+        Assert.Equal(nameof(ProxyPanel), skip.Subject);
+        Assert.Contains("WithAssemblies", skip.Reason, StringComparison.Ordinal);
+        Assert.Equal("Bad.axaml", skip.RelativePath);
+    }
+
+    /// <summary>A scan with no themes had nothing to check, so it has nothing to name either.</summary>
+    [Fact]
+    public void WithoutAssemblies_AndNoThemes_NothingIsSkipped()
+    {
+        Write("Plain.axaml", $"<UserControl {Header}><Border /></UserControl>");
+
+        Assert.Empty(RunWithoutTypes().Skipped);
+    }
 }

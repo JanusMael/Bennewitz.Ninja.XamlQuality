@@ -35,6 +35,13 @@ namespace Bennewitz.Ninja.XamlQuality.Rules;
 /// theme is not in the scan, since it may ship from another package. A lower count showed that
 /// something fell out; the skip says which control, and why.
 /// </para>
+/// <para>
+/// ⛔ <b>A scan given no assemblies checks nothing, and says so.</b> Parts are read from compiled
+/// code, so without <see cref="XamlScanContext.WithAssemblies"/> there is nothing to read. That
+/// used to return zero inspected and nothing else, which a consumer who copied a
+/// <see cref="XamlScanContext.Load"/> call without it would read as success. Every themed control
+/// in the scan is now named as skipped.
+/// </para>
 /// </remarks>
 public sealed class TemplatePartRule : IXamlRule
 {
@@ -54,9 +61,21 @@ public sealed class TemplatePartRule : IXamlRule
 
         if (context.Assemblies.Count == 0)
         {
-            // Nothing to check against. Zero findings AND zero inspected, so a consumer who forgot
-            // WithAssemblies sees the difference between "agrees" and "never asked".
-            return XamlRuleResult.Clean(0);
+            // Nothing to read parts from. Zero findings AND zero inspected, and every themed control
+            // is named as skipped: a consumer who forgot WithAssemblies is told so, not reassured.
+            // A scan with no themes had nothing to check, and says nothing.
+            return XamlRuleResult.Clean(0) with
+            {
+                Skipped =
+                [
+                    .. ThemesIn(context).Select(theme => new XamlSkip(
+                        theme.Target,
+                        "The scan was given no assemblies, so this control's parts could not be read and "
+                        + "nothing was checked. Call WithAssemblies with the assembly that defines it.",
+                        theme.File.RelativePath,
+                        theme.Line)),
+                ],
+            };
         }
 
         (Dictionary<string, SortedSet<string>> declared, HashSet<string> known) = ReadControls(context.Assemblies);
@@ -66,60 +85,48 @@ public sealed class TemplatePartRule : IXamlRule
         HashSet<string> themed = new(StringComparer.Ordinal);
         int inspected = 0;
 
-        foreach (XamlFile file in context.ParsedFiles)
+        foreach ((XamlFile file, XElement theme, string target, int? line) in ThemesIn(context))
         {
-            foreach (XElement theme in file.Document!.Descendants()
-                         .Where(e => string.Equals(e.Name.LocalName, "ControlTheme", StringComparison.Ordinal)))
+            themed.Add(target);
+
+            if (!declared.TryGetValue(target, out SortedSet<string>? wanted))
             {
-                if (TargetTypeOf(theme) is not { } target)
+                // A theme for a type the scanned assemblies do not hold is not the scan's to
+                // explain: it is usually a framework control's.
+                if (known.Contains(target))
                 {
-                    continue;
-                }
-
-                themed.Add(target);
-                int? line = (theme as IXmlLineInfo).HasLineInfo()
-                    ? ((IXmlLineInfo)theme).LineNumber
-                    : null;
-
-                if (!declared.TryGetValue(target, out SortedSet<string>? wanted))
-                {
-                    // A theme for a type the scanned assemblies do not hold is not the scan's to
-                    // explain: it is usually a framework control's.
-                    if (known.Contains(target))
-                    {
-                        skipped.Add(new XamlSkip(
-                            target,
-                            "It has a ControlTheme here, but no template part was found in its code: no "
-                            + "PART_ constant, and no PART_ literal passed to a Find or Get lookup. Either it "
-                            + "has no parts, or it names them in a way this rule cannot read: built at "
-                            + "runtime, or looked up through a helper named otherwise.",
-                            file.RelativePath,
-                            line));
-                    }
-
-                    continue;
-                }
-
-                HashSet<string> present = PartsNamedUnder(theme);
-
-                foreach (string part in wanted)
-                {
-                    inspected++;
-                    if (present.Contains(part))
-                    {
-                        continue;
-                    }
-
-                    findings.Add(new XamlFinding(
-                        Id,
-                        file.Path,
+                    skipped.Add(new XamlSkip(
+                        target,
+                        "It has a ControlTheme here, but no template part was found in its code: no "
+                        + "PART_ constant, and no PART_ literal passed to a Find or Get lookup. Either it "
+                        + "has no parts, or it names them in a way this rule cannot read: built at "
+                        + "runtime, or looked up through a helper named otherwise.",
                         file.RelativePath,
-                        line,
-                        $"{target} looks up the template part '{part}', and this ControlTheme does "
-                        + $"not declare it. The lookup will return null at runtime and the feature "
-                        + $"behind it will be silently absent. Add Name=\"{part}\" to the element "
-                        + "that plays that part, or drop the lookup."));
+                        line));
                 }
+
+                continue;
+            }
+
+            HashSet<string> present = PartsNamedUnder(theme);
+
+            foreach (string part in wanted)
+            {
+                inspected++;
+                if (present.Contains(part))
+                {
+                    continue;
+                }
+
+                findings.Add(new XamlFinding(
+                    Id,
+                    file.Path,
+                    file.RelativePath,
+                    line,
+                    $"{target} looks up the template part '{part}', and this ControlTheme does "
+                    + $"not declare it. The lookup will return null at runtime and the feature "
+                    + $"behind it will be silently absent. Add Name=\"{part}\" to the element "
+                    + "that plays that part, or drop the lookup."));
             }
         }
 
@@ -224,6 +231,29 @@ public sealed class TemplatePartRule : IXamlRule
         }
 
         return (declared, known);
+    }
+
+    /// <summary>Every <c>ControlTheme</c> in the scan that names a target type, with where it is.</summary>
+    private static IEnumerable<(XamlFile File, XElement Theme, string Target, int? Line)> ThemesIn(
+        XamlScanContext context)
+    {
+        foreach (XamlFile file in context.ParsedFiles)
+        {
+            foreach (XElement theme in file.Document!.Descendants()
+                         .Where(e => string.Equals(e.Name.LocalName, "ControlTheme", StringComparison.Ordinal)))
+            {
+                if (TargetTypeOf(theme) is not { } target)
+                {
+                    continue;
+                }
+
+                int? line = (theme as IXmlLineInfo).HasLineInfo()
+                    ? ((IXmlLineInfo)theme).LineNumber
+                    : null;
+
+                yield return (file, theme, target, line);
+            }
+        }
     }
 
     /// <summary>A part name: the prefix and something after it.</summary>

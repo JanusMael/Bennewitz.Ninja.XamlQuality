@@ -71,8 +71,9 @@ this one.
 
 **Read `Skipped` as well as `Inspected`.** Every result also names what the rule saw but could not
 check. For `XQ1003` that is a control with a `ControlTheme` in the scan and no part found in its
-code, or a control that declares parts but has no theme in the scan. Neither is a violation, and
-some are correct; both are places where a clean result is not what it seems.
+code, a control that declares parts but has no theme in the scan, and, when the scan was given no
+assemblies at all, every themed control. None is a violation, and some are correct; all are places
+where a clean result is not what it seems.
 
 ## Versioning
 
