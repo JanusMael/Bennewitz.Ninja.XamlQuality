@@ -25,6 +25,18 @@ to drive a UI — a stable identity per control, an honest name, patterns that d
 nothing present in the tree that is not on screen — is what a screen reader needs. Treat each gap as
 an accessibility defect with a test, not as test plumbing.
 
+The harnesses read the same peers a screen reader reads, and drive them with no synthetic input, so
+"every control a harness needs has an honest peer" and "a screen reader can use this application"
+are one requirement, verified one way. A peer that advertises a pattern it does not honour fails both.
+
+**From Avalonia 12, the same peers reach Linux.** `Avalonia.FreeDesktop.AtSpi` publishes them on the
+AT-SPI bus, one node per `AutomationPeer`, and an application built on `Avalonia.Desktop` carries it
+through `Avalonia.X11`, which starts it with the application. nuget.org lists it from 12.0.0-preview2
+and in no 11.x release. So the peers these rules ask for serve Linux screen readers as well as
+Windows UI Automation clients. **That the surface exists there is read from the source; that a
+harness can drive it over AT-SPI has not been verified.** Every harness behind this method drives
+Windows UI Automation.
+
 **Why it is not a preference**: in TailBlazer every one of these gaps produced a *false result*
 before it was closed — a number that looked like a defect in the application and was an artefact
 of how it was read.
