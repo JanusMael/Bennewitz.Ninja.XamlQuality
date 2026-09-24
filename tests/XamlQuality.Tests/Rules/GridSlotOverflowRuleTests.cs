@@ -160,6 +160,104 @@ public sealed class GridSlotOverflowRuleTests : IDisposable
     }
 
     /// <summary>
+    /// ⛔ A span's room is every slot it crosses. Measured against its first column alone, a control
+    /// that fits the two columns it spans was reported: a false positive on correct markup.
+    /// </summary>
+    [Fact]
+    public void AChildThatFitsTheColumnsItSpans_IsNotReported()
+    {
+        Write("SpanFits.axaml", Grid("ColumnDefinitions=\"50,50\"",
+            "<Border Grid.ColumnSpan=\"2\" Width=\"80\" />"));
+
+        XamlRuleResult result = Run();
+
+        Assert.Empty(result.Findings);
+        Assert.Equal(1, result.Inspected);
+    }
+
+    [Fact]
+    public void AChildWiderThanTheColumnsItSpans_IsReported()
+    {
+        Write("SpanTooNarrow.axaml", Grid("ColumnDefinitions=\"50,50\"",
+            "<Border Grid.ColumnSpan=\"2\" Width=\"120\" />"));
+
+        XamlFinding finding = Assert.Single(Run().Findings);
+        Assert.Contains("2 columns fixed at 100 together", finding.Message, StringComparison.Ordinal);
+    }
+
+    [Fact]
+    public void AChildThatFitsTheRowsItSpans_IsNotReported()
+    {
+        Write("RowSpanFits.axaml", Grid("RowDefinitions=\"30,30\"",
+            "<Border Grid.RowSpan=\"2\" MinHeight=\"50\" />"));
+
+        Assert.Empty(Run().Findings);
+    }
+
+    /// <summary>⛔ A span across a star column is as undecidable as the star column itself.</summary>
+    [Fact]
+    public void ASpanAcrossAStarColumn_IsNotDecidableAndIsNotReported()
+    {
+        Write("SpanStar.axaml", Grid("ColumnDefinitions=\"50,*\"",
+            "<Border Grid.ColumnSpan=\"2\" Width=\"500\" />"));
+
+        Assert.Empty(Run().Findings);
+    }
+
+    /// <summary>⚠ The spacing between the columns a control spans is room it gets.</summary>
+    [Fact]
+    public void ColumnSpacing_CountsInsideASpan()
+    {
+        Write("SpanSpacing.axaml", Grid("ColumnDefinitions=\"50,50\" ColumnSpacing=\"10\"",
+            "<Border Grid.ColumnSpan=\"2\" Width=\"105\" />"));
+
+        Assert.Empty(Run().Findings);
+    }
+
+    /// <summary>⛔ Bound spacing is not knowable from markup, so a span across it is not measured.</summary>
+    [Fact]
+    public void BoundSpacing_MakesASpanUndecidable()
+    {
+        Write("SpanBoundSpacing.axaml", Grid("ColumnDefinitions=\"50,50\" ColumnSpacing=\"{Binding Gap}\"",
+            "<Border Grid.ColumnSpan=\"2\" Width=\"500\" />"));
+
+        Assert.Empty(Run().Findings);
+    }
+
+    /// <summary>
+    /// ⛔ The framework places an index past the last column IN the last column, so that is the slot
+    /// to measure. Skipping it reported nothing where the control really overflows.
+    /// </summary>
+    [Fact]
+    public void AnIndexPastTheLastColumn_IsMeasuredAgainstTheLastColumn()
+    {
+        Write("PastTheEnd.axaml", Grid("ColumnDefinitions=\"200,50\"",
+            "<Border Grid.Column=\"9\" Width=\"80\" />"));
+
+        Assert.Single(Run().Findings);
+    }
+
+    /// <summary>⚠ A span running off the grid's edge covers only the columns that remain.</summary>
+    [Fact]
+    public void ASpanPastTheLastColumn_IsClampedToTheColumnsThatRemain()
+    {
+        Write("SpanPastTheEnd.axaml", Grid("ColumnDefinitions=\"50,50,50\"",
+            "<Border Grid.Column=\"2\" Grid.ColumnSpan=\"3\" Width=\"80\" />"));
+
+        Assert.Single(Run().Findings);
+    }
+
+    /// <summary>⛔ A bound span is not knowable from markup, so the control is not measured.</summary>
+    [Fact]
+    public void ABoundSpan_IsNotDecidableAndIsNotReported()
+    {
+        Write("SpanBound.axaml", Grid("ColumnDefinitions=\"50,50\"",
+            "<Border Grid.ColumnSpan=\"{Binding Span}\" Width=\"500\" />"));
+
+        Assert.Empty(Run().Findings);
+    }
+
+    /// <summary>
     /// ⭐ The one that separates "nothing is wrong" from "nothing was checked". Every assertion
     /// above still passes if the selector stops matching Grid entirely.
     /// </summary>

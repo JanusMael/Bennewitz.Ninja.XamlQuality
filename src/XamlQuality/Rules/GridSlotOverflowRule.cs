@@ -23,6 +23,14 @@ namespace Bennewitz.Ninja.XamlQuality.Rules;
 /// is worse than no rule, because people stop reading its output.
 /// </para>
 /// <para>
+/// ⚠ <b>A control is measured where the framework places it.</b> <c>Grid</c> clamps an index past
+/// its last definition to the last one, and a span to the definitions that remain, and a span's room
+/// is every slot it crosses plus the spacing between them. So an out-of-range <c>Grid.Column</c> is
+/// measured against the last column rather than skipped, and a control that fits the columns it spans
+/// is not measured against the first of them alone. A span that crosses an <c>Auto</c> or <c>*</c>
+/// slot, or a bound index, span or spacing, is not decidable, like an <c>Auto</c> slot itself.
+/// </para>
+/// <para>
 /// ⚠ <b>Two spellings, and checking one is how a rule quietly passes.</b> Definitions are written
 /// either as the attribute shorthand (<c>RowDefinitions="Auto,0,*"</c>) or as property ELEMENTS
 /// (<c>&lt;Grid.RowDefinitions&gt;&lt;RowDefinition Height="0"/&gt;…</c>). The shorthand is more
@@ -64,6 +72,9 @@ public sealed class GridSlotOverflowRule : IXamlRule
                 IReadOnlyList<double?> columns = Definitions(grid, "ColumnDefinitions", "ColumnDefinition", "Width");
                 if (rows.Count == 0 && columns.Count == 0) { continue; }
 
+                double? rowSpacing = Spacing(grid, "RowSpacing");
+                double? columnSpacing = Spacing(grid, "ColumnSpacing");
+
                 // Grid.Row and Grid.Column bind to DIRECT children only; an element nested inside
                 // another panel is positioned by that panel, not by this Grid.
                 foreach (XElement child in grid.Elements())
@@ -73,8 +84,8 @@ public sealed class GridSlotOverflowRule : IXamlRule
 
                     inspected++;
 
-                    Report(child, rows, "Row", "MinHeight", "Height", "row", "tall", findings, file);
-                    Report(child, columns, "Column", "MinWidth", "Width", "column", "wide", findings, file);
+                    Report(child, rows, rowSpacing, "Row", "RowSpan", "MinHeight", "Height", "row", "tall", findings, file);
+                    Report(child, columns, columnSpacing, "Column", "ColumnSpan", "MinWidth", "Width", "column", "wide", findings, file);
                 }
             }
         }
@@ -85,7 +96,9 @@ public sealed class GridSlotOverflowRule : IXamlRule
     private void Report(
         XElement child,
         IReadOnlyList<double?> slots,
+        double? spacing,
         string indexProperty,
+        string spanProperty,
         string minProperty,
         string sizeProperty,
         string slotWord,
@@ -93,24 +106,46 @@ public sealed class GridSlotOverflowRule : IXamlRule
         List<XamlFinding> findings,
         XamlFile file)
     {
-        int index = AttachedIndex(child, indexProperty);
-        if (index < 0 || index >= slots.Count) { return; }
+        if (slots.Count == 0) { return; }
 
-        double? slot = slots[index];
-        if (slot is null) { return; }               // Auto or star: not decidable from markup.
+        int index = AttachedInteger(child, indexProperty, fallback: 0);
+        int span = AttachedInteger(child, spanProperty, fallback: 1);
+        if (index < 0 || span < 1) { return; }      // Bound or invalid: not decidable from markup.
+
+        // Where the framework places it: past the last definition means IN the last one, and a span
+        // running off the edge covers only the definitions that remain.
+        index = Math.Min(index, slots.Count - 1);
+        span = Math.Min(span, slots.Count - index);
+
+        double available = 0;
+        for (int i = index; i < index + span; i++)
+        {
+            if (slots[i] is not double size) { return; }   // Auto or star: not decidable from markup.
+            available += size;
+        }
+
+        if (span > 1)
+        {
+            if (spacing is null) { return; }               // Bound spacing: not decidable either.
+            available += spacing.Value * (span - 1);
+        }
 
         double? declared = Number(child, minProperty) ?? Number(child, sizeProperty);
-        if (declared is null || declared <= slot) { return; }
+        if (declared is null || declared <= available) { return; }
 
         int? line = (child as IXmlLineInfo).HasLineInfo() ? ((IXmlLineInfo)child).LineNumber : null;
+
+        string room = span == 1
+            ? $"a {slotWord} fixed at {Format(available)}"
+            : $"{span} {slotWord}s fixed at {Format(available)} together";
 
         findings.Add(new XamlFinding(
             Id,
             file.Path,
             file.RelativePath,
             line,
-            $"This {child.Name.LocalName} asks to be {Format(declared.Value)} {dimensionWord} in a "
-            + $"{slotWord} fixed at {Format(slot.Value)}. It is arranged at the size it asked for and "
+            $"This {child.Name.LocalName} asks to be {Format(declared.Value)} {dimensionWord} in "
+            + $"{room}. It is arranged at the size it asked for and "
             + "keeps that size in the automation tree, so a screen reader and a UI test see it even "
             + "when nothing is drawn. Bind IsVisible alongside whatever sizes the "
             + $"{slotWord} — that removes it from layout and from the tree together, which "
@@ -150,6 +185,26 @@ public sealed class GridSlotOverflowRule : IXamlRule
                 ?.Value ?? "*"))];
     }
 
+    /// <summary>
+    /// The grid's <c>RowSpacing</c> or <c>ColumnSpacing</c>, in either spelling: 0 when unset, as the
+    /// framework treats it, and <c>null</c> when set to anything but a literal number.
+    /// </summary>
+    private static double? Spacing(XElement grid, string property)
+    {
+        string? raw = grid.Attributes()
+            .FirstOrDefault(a => string.Equals(a.Name.LocalName, property, StringComparison.Ordinal))
+            ?.Value
+            ?? grid.Elements()
+                .FirstOrDefault(e => e.Name.LocalName.EndsWith("." + property, StringComparison.Ordinal))
+                ?.Value;
+
+        if (raw is null) { return 0; }
+
+        return double.TryParse(raw.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
+            ? value
+            : null;
+    }
+
     /// <summary>A fixed size, or <c>null</c> for <c>Auto</c>, <c>*</c> and anything unparseable.</summary>
     private static double? Fixed(string raw) =>
         raw.Contains('*', StringComparison.Ordinal)
@@ -166,17 +221,20 @@ public sealed class GridSlotOverflowRule : IXamlRule
         return attribute is null ? null : Fixed(attribute.Value);
     }
 
-    /// <summary>The attached <c>Grid.Row</c> / <c>Grid.Column</c> index; 0 when unset, as the framework does.</summary>
-    private static int AttachedIndex(XElement element, string property)
+    /// <summary>
+    /// An attached <c>Grid</c> integer, the <c>Row</c>, <c>Column</c> or a span: <paramref name="fallback"/>
+    /// when unset, as the framework does, and -1 when the value is not a literal integer.
+    /// </summary>
+    private static int AttachedInteger(XElement element, string property, int fallback)
     {
         XAttribute? attribute = element.Attributes().FirstOrDefault(a =>
             a.Name.LocalName.EndsWith(property, StringComparison.Ordinal)
             && a.Name.LocalName.Contains("Grid", StringComparison.Ordinal));
 
-        if (attribute is null) { return 0; }
+        if (attribute is null) { return fallback; }
 
-        return int.TryParse(attribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int index)
-            ? index
+        return int.TryParse(attribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value)
+            ? value
             : -1;
     }
 
