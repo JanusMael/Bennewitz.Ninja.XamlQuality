@@ -255,6 +255,12 @@ can be collected first).
   before and after each, output redirected to one file per harness, a summary CSV, and **an exit
   code equal to the number that were not PASS**. Nothing else will tell you which change broke which
   harness.
+- **Serial by default.** Run harnesses in parallel only once a parallel sweep's verdicts have matched
+  a serial sweep's. A harness that finds its window by its own process id is safe beside another by
+  inspection, which is not the same as reliable under load.
+- **A harness the sweep leaves out is a row, not a footnote.** When a background sweep skips the ones
+  that need the foreground, list them in the summary as not run and not counted, so a sweep that
+  skipped two does not read as complete.
 - **Never pipe a harness or a sweep through `tail`/`head`.** The shell reports the last element of a
   pipeline, so a sweep with three failures reported exit 0.
 - **Name the known non-green in the runner or the project's rules**, with the reason each is
