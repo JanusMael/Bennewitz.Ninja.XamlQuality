@@ -44,6 +44,7 @@ people stop referencing.
 | `BNXQ1004` | Every control fits the fixed Grid slot it is placed in. |
 | `BNXQ1005` | Every key binding on an items control sits where keyboard focus can reach it. |
 | `BNXQ1006` | Every themed custom control gets an automation peer, or declares in its own code that it has none. |
+| `BNXQ1007` | Every interactive control declares an explicit AutomationId. |
 <!-- END GENERATED RULES -->
 
 The table above is rendered from the rule types — `Id` and `Summary` on each `IXamlRule` — and a
@@ -100,6 +101,15 @@ the scan themes and the scanned assemblies define, whether anything in its chain
 peer, as `Button` does and `TemplatedControl` and `ContentControl` do not. A decorative control opts
 out by overriding it to return the empty peer, which says so in the control's own code. Pass the
 application's assembly to `WithAssemblies`, from a process that can load its framework.
+
+**`BNXQ1007` is the id a test searches by.** `BNXQ1002` asks for the name a person reads; this asks
+for the `AutomationProperties.AutomationId` a test or an agent finds a control by, in either
+spelling, or MAUI's plain `AutomationId`. An `x:Name` does not count, although Avalonia derives an id
+from it: renaming the field would rename what every test searches for. An empty or blank id is
+reported as empty, because on Avalonia it replaces the id the framework would have derived. The rule
+covers `BNXQ1002`'s framework set and `Expander`, which no other rule checks for an id, and takes
+your own control names as `BNXQ1002` does. It checks that an id is present, not that it is unique: a
+control in an item template declares one id for every row.
 
 **Read `Skipped` as well as `Inspected`.** Every result also names what the rule saw but could not
 check. For `BNXQ1003` that is a control with a `ControlTheme` in the scan and no part found in its
