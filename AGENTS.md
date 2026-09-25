@@ -96,6 +96,7 @@ records which types are public and which stay internal.
 |---|---|
 | `docs/avalonia-gotchas.md` | Measured Avalonia foot-guns, each with symptom, cause and fix. Moved here from ClaudeForge |
 | `docs/ai-drivable-ui.md` | The method for a desktop UI an agent can drive and verify, begun in TailBlazer. This is its one living copy; TailBlazer points here instead of keeping its own |
+| `docs/ai-drivable-ui/` | The tools and journals the guide links to, moved from TailBlazer's Avalonia port |
 | `docs/publishing.md` | Trusted publishing, the version rule, and verifying a release against the feed |
 
 The gotchas document lives beside the rules on purpose. An entry that can be checked mechanically is
