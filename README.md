@@ -52,9 +52,10 @@ XamlQuality.slnx` and commit the result. Everything below the markers is written
 none of it is a property of any single rule.
 
 **The ids carry the family's prefix.** Every id is `BN`, for the family, then `XQ`, this product's
-initials, then its number. Until the release after `2026.3.924` the ids were `XQ1001` to `XQ1005`:
-only the prefix changed, and `BNXQ1006` never shipped under the old one. A filter or suppression
-keyed on an old id stops matching until it names the new one. The prefix does not change again.
+initials, then its number. Up to `2026.3.924` the ids shipped as `XQ1001` to `XQ1004`: only the
+prefix changed, and `BNXQ1005` and `BNXQ1006` never shipped under the old one. A filter or
+suppression keyed on an old id stops matching until it names the new one. The prefix does not
+change again.
 
 **Run both.** `BNXQ1002` deliberately leaves `Expander` out of its element set, because both rules
 firing on one element would report a single defect twice. So `BNXQ1002` alone is not a superset:
