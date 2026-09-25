@@ -10,6 +10,13 @@ TailBlazer repository, branch `feature/UpgradeToNet10`, whose paths are given wh
 **The one-line version: the application owns its automation surface, every claim is checked by the
 instrument that can actually see it, and no check is believed until it has been seen to fail.**
 
+⭐ **This is the one living copy, and what other repositories learn comes back here.** It belongs to
+[Bennewitz.Ninja.XamlQuality](https://github.com/JanusMael/Bennewitz.Ninja.XamlQuality). Send a new
+lesson, or a correction, to the session working in that repository by message (it answers as
+`XamlQuality`), with the measurement or source that shows it. When no such session is running, open
+an issue there instead. A claim is checked before it lands, and the sender hears the outcome. Keep no
+copy elsewhere; cite this file by path or URL.
+
 ---
 
 ## 1. The stance: fix the application, not the harness

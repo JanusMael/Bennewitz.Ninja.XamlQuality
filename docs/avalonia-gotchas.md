@@ -8,6 +8,13 @@ Scope is Avalonia 12 on .NET 10, plus Semi.Avalonia wherever a theme is involved
 Its companion is [ai-drivable-ui.md](ai-drivable-ui.md), the method for making a desktop UI that an
 agent can drive and verify through its automation tree.
 
+⭐ **This is the one living copy, and what other repositories learn comes back here.** It belongs to
+[Bennewitz.Ninja.XamlQuality](https://github.com/JanusMael/Bennewitz.Ninja.XamlQuality). Send a new
+foot-gun, or a correction to an entry, to the session working in that repository by message (it
+answers as `XamlQuality`), with the versions and the measurement or source that show it. When no
+such session is running, open an issue there instead. A claim is checked before it lands, and the
+sender hears the outcome. Keep no copy elsewhere; cite this file by path or URL.
+
 ⭐ **An entry that can be checked mechanically belongs as a RULE in this library, not as prose
 here.** `XQ1004` and `XQ1005` began as entries below. `XQ1001` and `XQ1002` began as guards
 hand-rolled in application test suites, and each turned out to be stricter than the guard it
