@@ -144,10 +144,11 @@ on it** — see rule 4.
 
 **The foreground is a second gate, separate from input.** A combo box will not open its dropdown for
 a background window even when driven purely through automation. A window an agent's shell starts
-takes the foreground only on an unlocked, idle desktop: not while someone is working, and not while
-the session is locked, when LockApp holds it. **Hand foreground-needing harnesses to the person as a
-command to run** rather than folding them into an unattended sweep, and make them report
-INCONCLUSIVE, naming the foreground state, when they cannot decide.
+takes the foreground only while the session is unlocked and nobody is typing or clicking: the person
+can stay at the desk with their hands off, and a locked session leaves it with LockApp. **Hand
+foreground-needing harnesses to the person as a command to run** rather than folding them into an
+unattended sweep, and make them report INCONCLUSIVE, naming the foreground state, when they cannot
+decide.
 
 **To reach "the window was active and then was not" without input**, minimise it through
 `WindowPattern` — that deactivates a window that really was active. A second, parked launch is not
