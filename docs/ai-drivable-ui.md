@@ -99,7 +99,7 @@ wrong finding the port ever published.
 
 | Instrument | Answers | Blind to |
 |---|---|---|
-| **Layout bounds** (`Visual.Bounds`, `ActualWidth`) — in a headless fixture | Where layout put a control, relative to its **parent** | Paint, clipping, and anything relative to the window unless you translate |
+| **Layout bounds** (`Visual.Bounds`, `ActualWidth`) — in a headless fixture | Where layout put a control, relative to its **parent** | Paint, clipping, visibility (**a hidden control keeps the bounds it was last arranged at**), and anything relative to the window unless you translate |
 | **The automation peer's bounding rectangle** — in a runtime harness | What a harness perceives | Clipping: **a clipped control keeps its full rectangle** |
 | **A capture** — `PrintWindow` with `PW_RENDERFULLCONTENT`, or headless rendering | What actually reached the pixels | Anything not drawn |
 
