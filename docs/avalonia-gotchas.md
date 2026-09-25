@@ -643,6 +643,14 @@ public IReadOnlyList<PropertyEditorViewModel> VisibleChildren =>
 
 References: `ObjectPropertyEditorViewModel` (prefix categories + lazy `VisibleChildren`), `PropertyCategoryViewModel`, and the `[PropView.Realized] group=… wrappers=N` trace in `GroupPropertiesView.axaml.cs` — that counter is the fastest way to catch a regression of this class (a healthy page realizes a screenful; hundreds means something is eagerly building a subtree again).
 
+### There is no frame-rate cap: nothing ports WPF's `Timeline.DesiredFrameRate`
+
+**Symptom:** A WPF application that lowers `Timeline.DesiredFrameRate` to spare a slow machine has nothing to port it to. No animation type in Avalonia carries a frame rate, and no public setting caps the render loop.
+
+**Cause:** The render timer's rate belongs to the platform, which takes it from the display. On Windows, with the default `Win32PlatformOptions.CompositionMode`, a successful WinUI or DirectComposition connection replaces the render loop with one driven by its own vsync timer, which has no rate to set (`DirectCompositionConnection.cs:76`, `WinUiCompositorConnection.cs:82`). On the fallback path the timer is a `SleepLoopRenderTimer` at 60 fps, and `Win32Platform.UpdateTimerFps` resets its `DesiredFps` to the fastest monitor's refresh rate, never below 60, at startup and on every display change. `DesiredFps` is public, but the live timer is reachable only through `DefaultRenderLoop.Timer`, which is internal, and the next display change would undo a value set by reflection. `ShouldRenderOnUIThread` swaps in a `UiThreadRenderTimer` fixed at 60. On X11 the timer follows the fastest monitor's refresh rate in the same way. Read in Avalonia's source at tag 12.1.3, not measured at runtime.
+
+**Fix:** Cut the work instead of the rate: poll or redraw less often, run fewer animations, and turn `IsIndeterminate` off on a progress bar nobody is watching.
+
 ---
 
 ## Bindings / view-model
