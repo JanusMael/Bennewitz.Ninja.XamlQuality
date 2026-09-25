@@ -13,7 +13,7 @@ directly.
 
 | Rule | Why | Guarded by |
 |---|---|---|
-| `XamlQuality.csproj` takes no `PackageReference`; `System.CommandLine` belongs to the tool alone | The library's dependencies become every consumer's test-project dependencies | `Directory.Packages.props`, group `Tool`; `AssemblyQualityTests.AQ1003_no_assembly_references_a_framework_or_another_family_package`, whose `ForbiddenInTheLibraryOnly` names `System.CommandLine` |
+| `XamlQuality.csproj` takes no `PackageReference`; `System.CommandLine` belongs to the tool alone | The library's dependencies become every consumer's test-project dependencies | `Directory.Packages.props`, group `Tool`; `AssemblyQualityTests.BNAQ1003_no_assembly_references_a_framework_or_another_family_package`, whose `ForbiddenInTheLibraryOnly` names `System.CommandLine` |
 | Analysis goes in the library, never in `Program.cs` | A consumer's test project runs the same analysis without shelling out to the tool | `XamlQuality.ThemeAudit.csproj`, `Description` |
 | The tool's `AssemblyName` stays `ThemeAudit` and its `ToolCommandName` stays `theme-audit` | `InternalsVisibleTo("ThemeAudit")` is how the tool reaches `ResourceKeyScanner` and `ResourceKey`; the command name is what consumers' scripts and CI steps invoke | `src/XamlQuality/Properties/AssemblyInfo.cs`; `XamlQuality.ThemeAudit.csproj` comment on `ToolCommandName` |
 | `Properties/AssemblyInfo.cs` names which `ThemeAudit` types are public and which stay internal | The audit surface shipped public and a consumer binds to it, so narrowing a type is a breaking change | `src/XamlQuality/Properties/AssemblyInfo.cs` comment |
