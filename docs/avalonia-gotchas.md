@@ -871,6 +871,18 @@ They are the price of referencing DataGrid, not a defect to hunt for in your cod
 
 **Useful for diagnostics:** `Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")` returns `"wayland"` / `"x11"` / `"tty"` etc. on systemd-logind systems. ClaudeForge's `AppIcon.EnsureLoaded` logs this on Linux startup so bug reports self-identify the session type.
 
+### Driving an Avalonia app with `xdotool`: a menu is its own X window, a tooltip never appears, and accelerators do not arrive
+
+**Symptom:** A harness driving an Avalonia application under X11, with `xdotool` and window grabs, cannot find a menu's items in a grab of the main window. It never sees a tooltip, and it cannot open a menu by its keyboard accelerator, while clicks and plain keys work.
+
+**Cause:** Three separate behaviours, measured on GNOME Shell 48.7 on Wayland with XWayland 24.1.6. The application was on Avalonia 12.1.2 through its X11 backend, and so was an XWayland client. `xdotool` was 3.20160805.1, and frames were grabbed with ffmpeg's `x11grab` by window id.
+
+- **A menu popup is its own X window**: an override-redirect, unnamed child of the root. A grab of the main window never contains it.
+- **Synthetic pointer motion never raises a tooltip.** `xdotool mousemove` places the pointer, and a frame shows the cursor on the target, but no tooltip appears. The likely reason, not traced in source, is that synthetic motion never produces the dwell the tooltip service waits for.
+- **Keyboard accelerators sent with `xdotool` did not reach the menu.** `alt+v`, then the item's letter, did nothing, while clicking the menu worked. Plain keys such as `F7` and `ctrl+Down` reached a focused pane in the same session.
+
+**Fix:** To drive a menu, click the menu button and find the new large unnamed child in `xwininfo -root -children`. Grab that window to read the item positions, then click at the popup's screen origin plus the item's offset. A popup shorter than its items scrolls under `xdotool click 5`, and every item then moves, so grab again after scrolling. Judge tooltip text only from headless tests that assert it, never from a driven frame. Open menus by clicking, not by accelerator.
+
 ---
 
 ## .NET 10 / build

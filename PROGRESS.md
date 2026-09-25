@@ -28,6 +28,7 @@ merges only, and both give a branch's commits new hashes, so a row cites its pul
 | PR #13 | Both documents say in their headers that they are the one living copy, owned here, and that other repositories send what they learn to the session working here by message, or by an issue when none is running | Docs only |
 | PR #14, PR #15, PR #16 | `docs/ai-drivable-ui/` arrives with TailBlazer's harness artefacts, each adapted and approved by the owner: `Probe-UiTestEnvironment.ps1`, the shared-desktop and Windows Sandbox journals, and `HarnessWindowPlacement.cs` as a worked example. The guide links to each, gains two points on sweeps, and names that folder rather than TailBlazer's unpushed branch as the home of its worked examples. It no longer says an agent-started window never holds the foreground: it does while the session is unlocked and nobody is typing or clicking | Docs only |
 | PR #17 | `docs/avalonia-gotchas.md` gains three `ListBox` entries from TailBlazer's port, each re-measured on Avalonia 12.1.3: the selection changes inside the press, between its tunnel and its bubble; Shift-click ranges from an anchor index that a selection made in code moves; and there is no drag selection, because the pressed row keeps the pointer | Docs only |
+| PR #18 | `docs/avalonia-gotchas.md` gains a Linux entry on driving an Avalonia application with `xdotool` under XWayland: a menu popup is its own X window, synthetic motion raises no tooltip, and keyboard accelerators do not reach the menu | Docs only |
 
 ## Consumers inside the family
 
