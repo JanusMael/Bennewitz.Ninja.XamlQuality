@@ -651,6 +651,14 @@ References: `ObjectPropertyEditorViewModel` (prefix categories + lazy `VisibleCh
 
 **Fix:** Cut the work instead of the rate: poll or redraw less often, run fewer animations, and turn `IsIndeterminate` off on a progress bar nobody is watching.
 
+### There is no render tier: nothing ports WPF's `RenderCapability.Tier`
+
+**Symptom:** A WPF application that reads `RenderCapability.Tier` to tell software rendering from hardware, and does less work when rendering falls back to software, has nothing to port it to. No public member in Avalonia reports whether rendering is accelerated.
+
+**Cause:** What could answer it is the platform graphics, `IPlatformGraphics` and `IPlatformGraphicsWithFeatures` in `IPlatformGpu.cs`, and both are marked `[Unstable]`. The only way to reach the running instance is `AvaloniaLocator`, which is marked `[PrivateApi]`. On Windows, `Win32PlatformOptions.RenderingMode` is the list an application asks for, `AngleEgl` then `Software` by default, and which of them was chosen stays inside the internal `Win32GlManager`. Read in Avalonia's source at tag 12.1.3, not measured at runtime.
+
+**Fix:** Decide from what can be measured. A remote session, the usual reason rendering falls back to software, is reported by the Win32 `GetSystemMetrics(SM_REMOTESESSION)`, which names no UI framework; treat rendering as accelerated otherwise. The remote-session check was measured on a WPF-to-Avalonia port.
+
 ---
 
 ## Bindings / view-model
