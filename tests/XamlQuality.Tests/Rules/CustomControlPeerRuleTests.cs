@@ -5,7 +5,7 @@ using XamlQuality.Tests.Rules.PeerFakes;
 namespace XamlQuality.Tests.Rules;
 
 /// <summary>
-/// XQ1006 over <c>PeerFakes.cs</c>: a themed control is reported when nothing in its chain
+/// BNXQ1006 over <c>PeerFakes.cs</c>: a themed control is reported when nothing in its chain
 /// overrides peer creation, and passes when anything does.
 /// </summary>
 public sealed class CustomControlPeerRuleTests : IDisposable
@@ -44,7 +44,7 @@ public sealed class CustomControlPeerRuleTests : IDisposable
         XamlRuleResult result = Analyze();
 
         XamlFinding finding = Assert.Single(result.Findings);
-        Assert.Equal("XQ1006", finding.RuleId);
+        Assert.Equal("BNXQ1006", finding.RuleId);
         Assert.Equal(4, finding.Line);
         Assert.Contains("PeerlessBadge derives from FakeTemplatedControl, and nothing between it and FakePeerControl overrides OnCreateAutomationPeer", finding.Message, StringComparison.Ordinal);
         Assert.Equal(1, result.Inspected);

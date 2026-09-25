@@ -80,7 +80,7 @@ public sealed class GridSlotOverflowRuleTests : IDisposable
         XamlRuleResult result = Run();
 
         XamlFinding finding = Assert.Single(result.Findings);
-        Assert.Equal("XQ1004", finding.RuleId);
+        Assert.Equal("BNXQ1004", finding.RuleId);
         Assert.Contains("IsVisible", finding.Message, StringComparison.Ordinal);
     }
 

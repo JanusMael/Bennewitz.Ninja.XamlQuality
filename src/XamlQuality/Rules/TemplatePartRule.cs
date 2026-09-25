@@ -57,7 +57,7 @@ public sealed class TemplatePartRule : IXamlRule
     public const string PartPrefix = "PART_";
 
     /// <inheritdoc />
-    public string Id => "XQ1003";
+    public string Id => "BNXQ1003";
 
     /// <inheritdoc />
     public string Summary => "Every template part a control looks up is declared in its own theme.";

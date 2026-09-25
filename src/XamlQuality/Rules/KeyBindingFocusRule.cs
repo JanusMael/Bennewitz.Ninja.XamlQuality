@@ -57,7 +57,7 @@ namespace Bennewitz.Ninja.XamlQuality.Rules;
 public sealed class KeyBindingFocusRule : IXamlRule
 {
     /// <inheritdoc />
-    public string Id => "XQ1005";
+    public string Id => "BNXQ1005";
 
     /// <inheritdoc />
     public string Summary => "Every key binding on an items control sits where keyboard focus can reach it.";

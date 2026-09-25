@@ -83,7 +83,7 @@ public sealed class KeyBindingFocusRuleTests : IDisposable
         Assert.Empty(result.Skipped);
         Assert.Equal(1, result.Inspected);
         XamlFinding finding = Assert.Single(result.Findings);
-        Assert.Equal("XQ1005", finding.RuleId);
+        Assert.Equal("BNXQ1005", finding.RuleId);
         return finding;
     }
 

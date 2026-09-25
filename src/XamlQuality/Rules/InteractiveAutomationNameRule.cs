@@ -17,7 +17,7 @@ namespace Bennewitz.Ninja.XamlQuality.Rules;
 /// <para>
 /// ⚠ <b><c>Expander</c> is deliberately NOT in the default set.</b> Both rules would fire on the
 /// same element and a consumer would see one defect reported twice. Run both: this covers the
-/// breadth, <c>XQ1001</c> covers the case with the extra failure mode.
+/// breadth, <c>BNXQ1001</c> covers the case with the extra failure mode.
 /// </para>
 /// <para>
 /// ⛔ <b>Local names only, and that is load-bearing twice over.</b> The markup namespace differs
@@ -84,7 +84,7 @@ public sealed class InteractiveAutomationNameRule : IXamlRule
     }
 
     /// <inheritdoc />
-    public string Id => "XQ1002";
+    public string Id => "BNXQ1002";
 
     /// <inheritdoc />
     public string Summary => "Every interactive control declares AutomationProperties.Name.";

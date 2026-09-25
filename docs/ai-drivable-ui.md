@@ -63,7 +63,7 @@ Windows UI Automation.
    control-view search can reach, so an `AutomationId` on it appears nowhere. Override
    `OnCreateAutomationPeer`; name the peer with what the control *shows*; put it beside the control.
    `internal` is fine — grant `InternalsVisibleTo` to the test projects from one shared file.
-   XamlQuality's `XQ1006` checks this for every control your markup themes.
+   XamlQuality's `BNXQ1006` checks this for every control your markup themes.
 4. **Never advertise a pattern the peer does not honour.** Answering "not supported" is the truth;
    advertising `Selection` or `Scroll` and answering nothing is the defect. Honour it or withdraw it.
 5. **An automation property must not be sourced from the thing it will be used to check.** Naming a

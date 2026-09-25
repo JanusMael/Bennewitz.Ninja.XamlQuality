@@ -63,7 +63,7 @@ public sealed class GridSlotOverflowRule : IXamlRule
         "ColumnDefinitions", "ColumnDefinition", "Column", "ColumnSpan", "ColumnSpacing", "MinWidth", "Width", "column", "width", "wide");
 
     /// <inheritdoc />
-    public string Id => "XQ1004";
+    public string Id => "BNXQ1004";
 
     /// <inheritdoc />
     public string Summary => "Every control fits the fixed Grid slot it is placed in.";

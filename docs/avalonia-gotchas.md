@@ -16,7 +16,7 @@ such session is running, open an issue there instead. A claim is checked before 
 sender hears the outcome. Keep no copy elsewhere; cite this file by path or URL.
 
 ⭐ **An entry that can be checked mechanically belongs as a RULE in this library, not as prose
-here.** `XQ1004` and `XQ1005` began as entries below. `XQ1001` and `XQ1002` began as guards
+here.** `BNXQ1004` and `BNXQ1005` began as entries below. `BNXQ1001` and `BNXQ1002` began as guards
 hand-rolled in application test suites, and each turned out to be stricter than the guard it
 replaced in ways nobody predicted. Prose is for what a markup scan cannot see — template
 internals, runtime behaviour, platform differences. When an entry becomes checkable, promote it
@@ -115,7 +115,7 @@ So the same over-sized child paints over its neighbours inside a `Border`, and i
 <local:SomePane Grid.Row="3" IsVisible="{Binding #TheSplitter.IsVisible}" />
 ```
 
-⭐ **The statically-decidable half of this is [`XQ1004`](../README.md#rules)** — a control declaring a `MinHeight`/`Height` larger than the FIXED `Grid` row or column it sits in. The rule stops there on purpose: a `*` row resolves against its siblings and `Auto` against content, so neither is knowable from markup, and whether anything clips depends on a container type a scan cannot identify once a consumer's own control is involved. Everything in this entry beyond that one check is why the prose stays.
+⭐ **The statically-decidable half of this is [`BNXQ1004`](../README.md#rules)** — a control declaring a `MinHeight`/`Height` larger than the FIXED `Grid` row or column it sits in. The rule stops there on purpose: a `*` row resolves against its siblings and `Auto` against content, so neither is knowable from markup, and whether anything clips depends on a container type a scan cannot identify once a consumer's own control is involved. Everything in this entry beyond that one check is why the prose stays.
 
 Do **not** reach for `ClipToBounds="True"` across the tree. It costs a clip push per element, it leaves the automation half of the problem untouched, and it re-hides the class of bug you just gained the ability to see.
 
@@ -479,7 +479,7 @@ Combined with `AutomationProperties.AccessibilityView="Raw"` on the inner glyph,
 
 **Cause:** With no `AutomationProperties.Name`, `ContentControlAutomationPeer` takes the name from the presented text, and a string is presented by an `AccessText` whose `Text` keeps the underscore that marks the access key. Measured on 12.1.3, headless: `Button` `_Save` gave `_Save`, `CheckBox` `_Remember me` gave `_Remember me`, `Button` `💾 Save` gave `💾 Save`, and `Label` `_Name` gave `Name`, since a `Label` strips it. With `AutomationProperties.Name="Save"`, the `Button` gave `Save`.
 
-**Fix:** Set `AutomationProperties.Name` on every content control whose content carries an access key or a glyph. `XQ1002` requires it on interactive controls.
+**Fix:** Set `AutomationProperties.Name` on every content control whose content carries an access key or a glyph. `BNXQ1002` requires it on interactive controls.
 
 ---
 ---
@@ -563,7 +563,7 @@ Measured with the same binding in place both ways: **0 command executions focusi
 
 ⚠ **A theme on the ITEM CONTAINER kills the same chord, and the symptom is identical.** An `ItemContainerTheme` with one `Focusable="False"` setter on `ListBoxItem` leaves focus unable to land anywhere inside the list, so a binding on the *list* never routes. Measured, one `ListBox` with `Ctrl+C` bound on the host, the container theme the only variable: item `Focusable` `True`→`False`, `item.Focus()` `True`→`False`, chord **1 run → 0 runs**. ⛔ And `SelectedIndex = 0` still works either way, so rows still highlight and nothing throws — a list that looks entirely normal with a dead shortcut.
 
-⭐ **The statically-decidable half of this is [`XQ1005`](../README.md#rules)**: a key binding on an items control where nothing in its focus path can take focus, meaning the control, its item containers, and what its item template puts in them. The condition is the **inverse** of the obvious one. A search for `Focusable="False"` would never fire on the list itself, because nobody writes it on a control that is unfocusable already. Measuring it for the rule, on Avalonia 12.1.3 under the Fluent, Simple and Semi themes, found five things:
+⭐ **The statically-decidable half of this is [`BNXQ1005`](../README.md#rules)**: a key binding on an items control where nothing in its focus path can take focus, meaning the control, its item containers, and what its item template puts in them. The condition is the **inverse** of the obvious one. A search for `Focusable="False"` would never fire on the list itself, because nobody writes it on a control that is unfocusable already. Measuring it for the rule, on Avalonia 12.1.3 under the Fluent, Simple and Semi themes, found five things:
 
 - **An unfocusable list alone is not a dead binding.** With stock rows, a click focuses the `ListBoxItem` and the chord runs. What kills it is the rows as well: an `ItemsControl`, whose containers are `ContentPresenter`s, or a list whose container theme sets `Focusable="False"`.
 - **An input in the item template revives it.** Around unfocusable rows, a click focuses a `TextBox` in the template, and the key bubbles through its row to the list.
