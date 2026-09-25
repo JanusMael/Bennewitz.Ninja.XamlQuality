@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup Label="Versioning">
-    <PackageVersion Include="Bennewitz.Ninja.AutoVersioning" Version="2026.3.914" />
+    <PackageVersion Include="Bennewitz.Ninja.AutoVersioning" Version="2026.3.916" />
   </ItemGroup>
 
   <ItemGroup Label="Tool">
