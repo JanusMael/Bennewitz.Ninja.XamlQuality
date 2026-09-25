@@ -54,21 +54,13 @@ framework-specific notes beside framework-neutral code is a deliberate split, no
 
 Same caveat applies to `Orientation="Vertical" StackPanel` in the vertical direction — child gets infinite available height. Less commonly a problem because vertical scrolling is the usual escape hatch.
 
-### Tooltips don't propagate from child to parent
+### A tooltip covers its host's children, so set it once, on the parent
 
-**Symptom:** `ToolTip.Tip` set on a parent `Border` works when hovering the empty padding/fill area but NOT when hovering the inner `TextBlock` content.
+**Symptom:** Advice written for Avalonia 11.0 says a `ToolTip.Tip` on a parent does not show while the pointer is over one of its children, so markup sets the same tip again on every child. On 12.x that repetition does nothing, and a different tip on a child replaces the parent's while the pointer is over that child.
 
-**Cause:** Avalonia tooltip resolution doesn't walk up the visual tree. The hit-tested control either has a tooltip or it doesn't — child controls don't inherit from ancestors.
+**Cause:** Since Avalonia 11.1.0, `ToolTipService` walks up from the element under the pointer to the nearest control with `ToolTip.Tip` set; 11.0 did not. Measured on 12.1.3, headless: with a tip on a `Border` only, the pointer over its child `TextBlock` opened the `Border`'s tip, and with a tip on both, the child's opened and the `Border`'s did not.
 
-**Fix:** Set `ToolTip.Tip` on BOTH the parent and the inner `TextBlock` (or any child the user is likely to hover):
-
-```xml
-<Border ToolTip.Tip="{x:Static loc:Strings.TipNew}">
-    <TextBlock Text="NEW" ToolTip.Tip="{x:Static loc:Strings.TipNew}" />
-</Border>
-```
-
-This pattern is documented in `PropertyEditorWrapper.axaml`'s scope-badge with the comment "set on BOTH so the entire coloured chiclet triggers the tooltip on hover."
+**Fix:** Set `ToolTip.Tip` once, on the element whose whole area should show it, and on a child only where that child should say something else.
 
 ### XML-comment double-dash (`--`) breaks AXAML
 
@@ -124,6 +116,21 @@ Do **not** reach for `ClipToBounds="True"` across the tree. It costs a clip push
 > **⚠ The trap underneath this one, and it is the expensive part.** `Visual.Bounds` and an automation peer's bounding rectangle are **not the same object**, and it is very easy to assert on one while reasoning about the other. This entry exists because a port measured a 50px overlap through UI Automation, reasoned about it as layout, and concluded the pane was painting over its neighbours. It was not — a `UserControl` was clipping it. The defaults table above is what to expect; *which object you interrogate* is what actually decides the answer.
 
 <sub>Measured on Avalonia 12.1.2, .NET 10, in a WPF→Avalonia port (`LayoutClipFixture`, 10 tests). The `ClipToBounds` defaults, the centring and the automation bounds are captures and peer reads under the **headless** platform — Avalonia's own peers, not the Windows UIA provider; the original field measurement came through real UIA and agreed. The WPF half is stated from `ArrangeCore`'s documented behaviour and is **not** measured here.</sub>
+
+### Two `TextBlock`s in different fonts do not share a baseline, but the `Run`s of one `TextBlock` do
+
+**Symptom:** A label and a value side by side, each in its own vertically centred `TextBlock` with a different `FontFamily`, sit visibly off one line.
+
+**Cause:** Centring aligns each block's box, and different fonts put the baseline at different heights in the box. Measured on 12.1.3 with Skia on Windows, at 14 px: Segoe UI's baseline and Consolas's sat 1.51 px apart. The `Run`s of one `TextBlock` are laid out on one line with one baseline, whatever their fonts.
+
+**Fix:** Put both in one `TextBlock` as `Run`s, each with its own `FontFamily`. `Run.Text` takes a binding.
+
+```xml
+<TextBlock>
+    <Run Text="Label: " />
+    <Run Text="{Binding Value}" FontFamily="Consolas" />
+</TextBlock>
+```
 
 ---
 
@@ -281,6 +288,22 @@ breaks **loudly** rather than subtly, because three of its missing keys are stat
 
 ---
 
+### Semi's own strings are Chinese until `SemiTheme.Locale` is set, and the UI culture is never read
+
+**Symptom:** Semi's built-in strings, such as the date and time pickers' field names, appear in Chinese in an English application, and setting `CultureInfo.CurrentUICulture` before the application starts does not change them.
+
+**Cause:** Semi.Avalonia 12.1.0.1's `SemiTheme.axaml` includes `Locale/zh-cn.axaml` unconditionally, and only its `Locale` property swaps the strings; nothing in the theme reads `CurrentUICulture`. Measured on 12.1.3, headless, with Semi 12.1.0.1: `STRING_DATEPICKER_DAY_TEXT` read `日` with the UI culture set to `en-US` or `de-DE` before the application was built, and `day` with `Locale` set to `en-US`.
+
+**Fix:** Set the locale on the theme, from the UI culture if that is what the application wants:
+
+```xml
+<semi:SemiTheme Locale="en-US" />
+```
+
+In code, `SemiTheme.OverrideLocaleResources` applies a locale's strings to an application or to one element.
+
+---
+
 ## Templates / controls
 
 ### `DataTemplate`s match in DECLARATION ORDER — a subclass template must be declared BEFORE the base type's
@@ -299,24 +322,24 @@ breaks **loudly** rather than subtly, because three of its missing keys are stat
 
 Reference: `PropertyEditorWrapper.axaml` — the `model` picker template sits immediately above the generic enum template for exactly this reason.
 
-### `AutoCompleteBox.ItemFilter` SUPERSEDES `FilterMode`
+### Opening an `AutoCompleteBox` filters by its current text, so after a selection it lists one item
 
-**Symptom:** Code that "shows the full list" by setting `FilterMode = AutoCompleteFilterMode.None` has no effect on a box that uses a custom filter — the list stays filtered to the current text.
+**Symptom:** After the user picks an item, opening the drop-down again, from a chevron or in code, lists only that item, or only the items whose text matches it.
 
-**Cause:** When an `ItemFilter` **delegate** is set, `FilterMode` is ignored entirely.
+**Cause:** Opening the drop-down repopulates it with the current `Text` as the search, through `FilterMode`, or through the `ItemFilter` delegate when `FilterMode` is `Custom`, which setting an `ItemFilter` makes it. The delegate applies only in `Custom` mode, so `FilterMode = None` switches it off too. A mode changed while the drop-down is open waits for the next time it is populated. Measured on 12.1.3, headless, with four items after selecting `banana`: `StartsWith` shows 1; `FilterMode = None` set before opening shows 4, with an `ItemFilter` set or without one; set while the drop-down is already open, it still shows 1 until the drop-down is closed and reopened.
 
-**Fix:** To temporarily show everything, swap the *delegate*, then restore it on `DropDownClosed`.
+**Fix:** Set `FilterMode = None` before opening, and restore the original mode, which is `Custom` when an `ItemFilter` is set, when the drop-down closes:
 
 ```csharp
-AutoCompleteFilterPredicate<object?>? original = box.ItemFilter;
-box.ItemFilter = (_, _) => true;                    // match everything
+AutoCompleteFilterMode original = box.FilterMode;
+box.FilterMode = AutoCompleteFilterMode.None;       // an ItemFilter applies only in Custom mode
 EventHandler? restore = null;
-restore = (_, _) => { box.ItemFilter = original; box.DropDownClosed -= restore; };
+restore = (_, _) => { box.FilterMode = original; box.DropDownClosed -= restore; };
 box.DropDownClosed += restore;
 box.IsDropDownOpen = true;
 ```
 
-Reference: `ModelPicker.axaml.cs` chevron handler (the fuzzy model picker).
+Measured the same way with an `ItemFilter` set: 4 shown while open, `Custom` again after it closes, and 1 on the next open.
 
 ---
 
@@ -429,6 +452,16 @@ Combined with `AutomationProperties.AccessibilityView="Raw"` on the inner glyph,
 **Fix:** use `AutomationProperties.HelpText` for the sentence and let `Text` be the name. UIA announces name then help text, so the user hears `"▲, Critical: Filesystem snapshots are your undo."` This is also already the convention in `PropertyEditorWrapper.axaml`, where each property's description rides `HelpText` on its label.
 
 ⭐ **A UIA dump reports `Name` by default, so `HelpText` looks absent unless you ask for it** — read `element.Current.HelpText` explicitly before concluding the annotation did not apply.
+
+---
+
+### A `ContentControl` names itself with its content's raw text, the mnemonic underscore and any emoji included
+
+**Symptom:** A `Button` whose content is `_Save` reports the automation name `_Save`, and one whose content starts with an emoji reports the emoji as part of its name. A UI test that looks the button up by its visible text, `Save`, does not find it.
+
+**Cause:** With no `AutomationProperties.Name`, `ContentControlAutomationPeer` takes the name from the presented text, and a string is presented by an `AccessText` whose `Text` keeps the underscore that marks the access key. Measured on 12.1.3, headless: `Button` `_Save` gave `_Save`, `CheckBox` `_Remember me` gave `_Remember me`, `Button` `💾 Save` gave `💾 Save`, and `Label` `_Name` gave `Name`, since a `Label` strips it. With `AutomationProperties.Name="Save"`, the `Button` gave `Save`.
+
+**Fix:** Set `AutomationProperties.Name` on every content control whose content carries an access key or a glyph. `XQ1002` requires it on interactive controls.
 
 ---
 ---
@@ -619,6 +652,26 @@ Measured on Avalonia 12.1.0, same process, same types, the only difference being
 ⛔ **The whole arrangement rests on one attribute's placement.** Moving `DataContext` up onto that ancestor — the tidying any reader would reach for — silently takes the outer commands away. With compiled bindings it is at least a build error rather than a null at runtime.
 
 ⚠ **Corollary: `IsVisible` belongs on the wrapper, not the inner control.** Left on the child, a collapsed pane is a *visible* host holding an invisible child — a live context menu floating over a pane that is not there.
+
+### Avalonia 12 removed `DragEventArgs.Data` and `IDataObject`, so drop data comes through `DataTransfer`
+
+**Symptom:** Drag-and-drop code written for Avalonia 11 does not compile: `DragEventArgs.Data`, `IDataObject` and `DataFormats.Files` are gone.
+
+**Cause:** Avalonia 12 replaced the payload API. `DragEventArgs` carries an `IDataTransfer DataTransfer`, formats are `DataFormat` values such as `DataFormat.File`, and `DataFormats` survives only as an empty class marked `[Obsolete(..., true)]`, so any use of it is a compile error. Read in Avalonia's source at tag 12.1.3, and confirmed from the metadata of the 12.1.3 assemblies.
+
+**Fix:** Read dropped files through the extension method:
+
+```csharp
+private void OnDrop(object? sender, DragEventArgs e)
+{
+    if (e.DataTransfer.TryGetFiles() is { } files)
+    {
+        // files is IStorageItem[]
+    }
+}
+```
+
+`DataTransferExtensions.TryGetFiles` returns `IStorageItem[]?`, and `AsyncDataTransferExtensions.TryGetFilesAsync` does the same for an `IAsyncDataTransfer`.
 
 ## Virtualization / perf
 
