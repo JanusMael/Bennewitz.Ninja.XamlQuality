@@ -140,9 +140,10 @@ on it** — see rule 4.
 
 **The foreground is a second gate, separate from input.** A combo box will not open its dropdown for
 a background window even when driven purely through automation. A window an agent's shell starts
-never holds the foreground at all. **Hand foreground-needing harnesses to the person as a command to
-run** rather than folding them into an unattended sweep, and make them report INCONCLUSIVE, naming
-the foreground state, when they cannot decide.
+takes the foreground only on an unlocked, idle desktop: not while someone is working, and not while
+the session is locked, when LockApp holds it. **Hand foreground-needing harnesses to the person as a
+command to run** rather than folding them into an unattended sweep, and make them report
+INCONCLUSIVE, naming the foreground state, when they cannot decide.
 
 **To reach "the window was active and then was not" without input**, minimise it through
 `WindowPattern` — that deactivates a window that really was active. A second, parked launch is not
@@ -263,6 +264,10 @@ can be collected first).
   clean runs are what you would expect whether or not a change helped.
 - **Re-probe the environment rather than remember it.** Console or remote session, display server,
   scaling — the same machine changed all three between one hour and the next.
+- **The long account is
+  [SharedDesktopHarnessJournal.md](ai-drivable-ui/SharedDesktopHarnessJournal.md)**: choosing an
+  approach from the environment, the foreground gate, parking a window, and the DPI traps, each
+  measured.
 
 ---
 
