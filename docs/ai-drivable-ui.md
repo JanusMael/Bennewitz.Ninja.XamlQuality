@@ -123,6 +123,11 @@ wrong finding the TailBlazer port ever published.
 | **Runtime harnesses that need the foreground** | The window holding focus | Light-dismissing controls (combo boxes, menus, overlay drawers) and activation-dependent behaviour. **Needs an undisturbed machine** |
 | **Runtime harnesses that send real input** | An isolated session (Windows Sandbox, Xvfb, a nested compositor) | Keyboard and mouse paths that genuinely need a keystroke. Keep this set small |
 
+**Ask the machine which of these it can run.**
+[`Probe-UiTestEnvironment.ps1`](ai-drivable-ui/Probe-UiTestEnvironment.ps1) prints the session, the
+display server and the scaling, then which approaches the machine supports. The same host can be a
+console session one hour and a Remote Desktop session the next, with different answers.
+
 **Prefer the first two, and count the rest by what each harness DOES, not by which helper it calls.**
 TailBlazer's Avalonia set is 29 harnesses; none sends input and two need the foreground. The count
 was wrong for weeks when it was taken by grepping for a tool's name.
