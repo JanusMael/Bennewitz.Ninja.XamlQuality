@@ -42,6 +42,15 @@ namespace Bennewitz.Ninja.XamlQuality.Rules;
 /// <see cref="XamlScanContext.Load"/> call without it would read as success. Every themed control
 /// in the scan is now named as skipped.
 /// </para>
+/// <para>
+/// ⛔ <b>Build output whose dependencies are not beside it is read, never thrown at.</b> A control
+/// whose base type lives in an assembly the process cannot load does not load itself, and the rule
+/// threw out of <see cref="Analyze"/> at the first method body that named such a type. Now a control
+/// the scanned assemblies define but could not load is named in <see cref="XamlRuleResult.Skipped"/>
+/// with what stopped it, where it would otherwise pass for a framework control the scan was not
+/// given, and a control whose code could be read only in part is checked on that part and named for
+/// the rest.
+/// </para>
 /// </remarks>
 public sealed class TemplatePartRule : IXamlRule
 {
@@ -78,7 +87,7 @@ public sealed class TemplatePartRule : IXamlRule
             };
         }
 
-        (Dictionary<string, SortedSet<string>> declared, HashSet<string> known) = ReadControls(context.Assemblies);
+        Reading reading = ReadControls(context.Assemblies);
 
         List<XamlFinding> findings = [];
         List<XamlSkip> skipped = [];
@@ -89,22 +98,37 @@ public sealed class TemplatePartRule : IXamlRule
         {
             themed.Add(target);
 
-            if (!declared.TryGetValue(target, out SortedSet<string>? wanted))
+            if (!reading.Declared.TryGetValue(target, out SortedSet<string>? wanted))
             {
-                // A theme for a type the scanned assemblies do not hold is not the scan's to
-                // explain: it is usually a framework control's.
-                if (known.Contains(target))
+                if (reading.Known.Contains(target))
                 {
                     skipped.Add(new XamlSkip(
                         target,
-                        "It has a ControlTheme here, but no template part was found in its code: no "
-                        + "PART_ constant, and no PART_ literal passed to a Find or Get lookup. Either it "
-                        + "has no parts, or it names them in a way this rule cannot read: built at "
-                        + "runtime, or looked up through a helper named otherwise.",
+                        reading.PartlyRead.TryGetValue(target, out string? unread)
+                            ? "It has a ControlTheme here, and no template part was found in the part of its "
+                              + $"code that could be read, but the rest could not be: {unread}. So nothing was "
+                              + $"checked. {LoadedTypes.Remedy}"
+                            : "It has a ControlTheme here, but no template part was found in its code: no "
+                              + "PART_ constant, and no PART_ literal passed to a Find or Get lookup. Either it "
+                              + "has no parts, or it names them in a way this rule cannot read: built at "
+                              + "runtime, or looked up through a helper named otherwise.",
+                        file.RelativePath,
+                        line));
+                }
+                else if (reading.NotLoaded.TryGetValue(target, out (string Source, string Cause) notLoaded))
+                {
+                    // Not a framework control: the scan was given the assembly that defines it.
+                    skipped.Add(new XamlSkip(
+                        target,
+                        $"It has a ControlTheme here, and {notLoaded.Source}, which the scan was given, defines "
+                        + $"it, but it could not be loaded: {notLoaded.Cause}. Its parts were not read and "
+                        + $"nothing was checked. {LoadedTypes.Remedy}",
                         file.RelativePath,
                         line));
                 }
 
+                // Any other theme is for a type the scanned assemblies do not define, which is not the
+                // scan's to explain: it is usually a framework control's.
                 continue;
             }
 
@@ -128,9 +152,19 @@ public sealed class TemplatePartRule : IXamlRule
                     + $"behind it will be silently absent. Add Name=\"{part}\" to the element "
                     + "that plays that part, or drop the lookup."));
             }
+
+            if (reading.PartlyRead.TryGetValue(target, out string? partly))
+            {
+                skipped.Add(new XamlSkip(
+                    target,
+                    $"Part of its code could not be read: {partly}. A part it looks up there was not "
+                    + $"checked, though the parts found in the rest were. {LoadedTypes.Remedy}",
+                    file.RelativePath,
+                    line));
+            }
         }
 
-        foreach ((string control, SortedSet<string> parts) in declared
+        foreach ((string control, SortedSet<string> parts) in reading.Declared
                      .Where(entry => !themed.Contains(entry.Key))
                      .OrderBy(entry => entry.Key, StringComparer.Ordinal))
         {
@@ -179,58 +213,134 @@ public sealed class TemplatePartRule : IXamlRule
     /// is checked against this type's theme, and reported there.
     /// </para>
     /// </remarks>
-    private static (Dictionary<string, SortedSet<string>> Declared, HashSet<string> Known) ReadControls(
-        IReadOnlyList<Assembly> assemblies)
+    private static Reading ReadControls(IReadOnlyList<Assembly> assemblies)
     {
-        const BindingFlags Everything = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static
-                                        | BindingFlags.Instance | BindingFlags.DeclaredOnly;
-
-        Dictionary<string, SortedSet<string>> declared = new(StringComparer.Ordinal);
-        HashSet<string> known = new(StringComparer.Ordinal);
+        Reading reading = new(
+            new Dictionary<string, SortedSet<string>>(StringComparer.Ordinal),
+            new HashSet<string>(StringComparer.Ordinal),
+            new Dictionary<string, string>(StringComparer.Ordinal),
+            new Dictionary<string, (string Source, string Cause)>(StringComparer.Ordinal));
 
         foreach (Assembly assembly in assemblies)
         {
-            foreach (Type type in TypesOf(assembly))
+            LoadedTypes types = LoadedTypes.Of(assembly);
+            foreach ((string name, string cause) in types.NotLoaded)
             {
-                Type owner = type;
-                while (owner.DeclaringType is { } outer)
-                {
-                    owner = outer;
-                }
+                reading.NotLoaded.TryAdd(name, (types.Source, cause));
+            }
 
+            foreach (Type type in types.Loaded)
+            {
+                // A nested type whose enclosing type did not load belongs to a control that did not
+                // either, and that control is already among the types that did not load.
                 // Compiler-generated at the top level: <Module>, <PrivateImplementationDetails>.
-                if (owner.Name.StartsWith('<'))
+                if (OwnerOf(type) is not { } owner || owner.Name.StartsWith('<'))
                 {
                     continue;
                 }
 
-                known.Add(owner.Name);
+                reading.Known.Add(owner.Name);
 
-                IEnumerable<string?> constants = type.GetFields(Everything)
-                    .Where(field => field.IsLiteral && field.FieldType == typeof(string))
-                    .Select(field => field.GetRawConstantValue() as string);
-
-                IEnumerable<string> literals = type.GetMethods(Everything)
-                    .Cast<MethodBase>()
-                    .Concat(type.GetConstructors(Everything))
-                    .SelectMany(method => CompiledStrings.LoadedBy(method, IsPartName))
-                    .Where(loaded => IsLookup(loaded.NextCall))
-                    .Select(loaded => loaded.Value);
-
-                foreach (string name in constants.Concat(literals).OfType<string>().Where(IsPartName))
+                List<string> names = PartNamesIn(type, out string? unread);
+                foreach (string name in names)
                 {
-                    if (!declared.TryGetValue(owner.Name, out SortedSet<string>? parts))
+                    if (!reading.Declared.TryGetValue(owner.Name, out SortedSet<string>? parts))
                     {
                         parts = new SortedSet<string>(StringComparer.Ordinal);
-                        declared[owner.Name] = parts;
+                        reading.Declared[owner.Name] = parts;
                     }
 
                     parts.Add(name);
                 }
+
+                if (unread is not null)
+                {
+                    reading.PartlyRead.TryAdd(owner.Name, unread);
+                }
             }
         }
 
-        return (declared, known);
+        return reading;
+    }
+
+    /// <summary>
+    /// The part names <paramref name="type"/> declares in its own members, with what stopped the
+    /// rest being read in <paramref name="unread"/>, or <c>null</c> when nothing did.
+    /// </summary>
+    /// <remarks>
+    /// ⛔ <b>Each field and each method is read on its own</b>, so one that needs an assembly the
+    /// process cannot load costs only itself. Reading a method's body loads the types of its locals,
+    /// and one naming a framework type the scan's process does not have threw out of
+    /// <see cref="Analyze"/>: <c>FileNotFoundException</c>, measured on a library's Release output.
+    /// </remarks>
+    private static List<string> PartNamesIn(Type type, out string? unread)
+    {
+        const BindingFlags Everything = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static
+                                        | BindingFlags.Instance | BindingFlags.DeclaredOnly;
+
+        List<string> names = [];
+        List<Exception> failures = [];
+
+        foreach (FieldInfo field in Read(() => type.GetFields(Everything), failures) ?? [])
+        {
+            if (Read(() => field.IsLiteral && field.FieldType == typeof(string) ? field.GetRawConstantValue() as string : null, failures)
+                    is { } constant
+                && IsPartName(constant))
+            {
+                names.Add(constant);
+            }
+        }
+
+        MethodBase[] methods = Read(() => (MethodBase[])[.. type.GetMethods(Everything), .. type.GetConstructors(Everything)], failures) ?? [];
+        foreach (MethodBase method in methods)
+        {
+            names.AddRange(Read(
+                () => CompiledStrings.LoadedBy(method, IsPartName)
+                    .Where(loaded => IsLookup(loaded.NextCall))
+                    .Select(loaded => loaded.Value)
+                    .ToList(),
+                failures) ?? []);
+        }
+
+        unread = failures.Count == 0 ? null : LoadedTypes.CauseOf(failures);
+        return names;
+    }
+
+    /// <summary>
+    /// The outermost type declaring <paramref name="type"/>, which is the one a <c>ControlTheme</c>
+    /// targets, or <c>null</c> when an enclosing type does not load.
+    /// </summary>
+    private static Type? OwnerOf(Type type)
+    {
+        try
+        {
+            Type owner = type;
+            while (owner.DeclaringType is { } outer)
+            {
+                owner = outer;
+            }
+
+            return owner;
+        }
+        catch (Exception ex) when (ElementTypes.IsUnreadable(ex))
+        {
+            return null;
+        }
+    }
+
+    /// <summary>A reflective read, or <c>null</c> with the exception kept when what it needs does not load.</summary>
+    private static T? Read<T>(Func<T?> read, List<Exception> failures)
+        where T : class
+    {
+        try
+        {
+            return read();
+        }
+        catch (Exception ex) when (ElementTypes.IsUnreadable(ex))
+        {
+            failures.Add(ex);
+            return null;
+        }
     }
 
     /// <summary>Every <c>ControlTheme</c> in the scan that names a target type, with where it is.</summary>
@@ -268,20 +378,6 @@ public sealed class TemplatePartRule : IXamlRule
     private static bool IsLookup(string? call) =>
         call is not null
         && (call.StartsWith("Find", StringComparison.Ordinal) || call.StartsWith("Get", StringComparison.Ordinal));
-
-    /// <summary>Every type in <paramref name="assembly"/> that loads, public or not.</summary>
-    private static IEnumerable<Type> TypesOf(Assembly assembly)
-    {
-        try
-        {
-            return assembly.GetTypes();
-        }
-        catch (ReflectionTypeLoadException ex)
-        {
-            // A type whose dependencies do not load is skipped rather than failing the whole scan.
-            return ex.Types.OfType<Type>();
-        }
-    }
 
     /// <summary>
     /// The control a <c>ControlTheme</c> targets, as a bare type name.
@@ -333,4 +429,15 @@ public sealed class TemplatePartRule : IXamlRule
 
         return present;
     }
+
+    /// <summary>
+    /// What the compiled code says: each control's part names, the name of every type that loaded,
+    /// each control whose code could not all be read with why, and each type the assemblies define
+    /// that did not load, with the assembly that defines it and why.
+    /// </summary>
+    private sealed record Reading(
+        Dictionary<string, SortedSet<string>> Declared,
+        HashSet<string> Known,
+        Dictionary<string, string> PartlyRead,
+        Dictionary<string, (string Source, string Cause)> NotLoaded);
 }

@@ -85,7 +85,8 @@ only what it can decide, and key bindings on other controls are not checked.
 
 **Read `Skipped` as well as `Inspected`.** Every result also names what the rule saw but could not
 check. For `XQ1003` that is a control with a `ControlTheme` in the scan and no part found in its
-code, a control that declares parts but has no theme in the scan, and, when the scan was given no
+code, a control that declares parts but has no theme in the scan, one the scanned assemblies define
+but could not load, one whose code could be read only in part, and, when the scan was given no
 assemblies at all, every themed control. For `XQ1004` it is a control whose fit depends on a value
 markup cannot evaluate: a bound or resource-based definition, index, span, spacing or size, named
 in the reason. For `XQ1005` it is every key binding it could not decide: one where a style sets
