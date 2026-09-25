@@ -70,6 +70,11 @@ and so is a lookup through a helper named otherwise. And every lookup is taken t
 control's own template, so one that reaches into a child control's template is reported against
 this one.
 
+**`XQ1004` counts only what it measured.** A control in an `Auto` or `*` row or column, or one that
+declares no size, has nothing to measure, so it is neither inspected nor skipped. Markup whose grids
+are all `Auto` and `*` therefore reads zero inspected, and that is a true answer, not an inert rule:
+a floor on `Inspected` suits markup with fixed rows or columns, or a fixture that has them.
+
 **`XQ1005` needs the assemblies the markup belongs to.** A key binding fires only while focus is on
 its control or inside it, so the rule asks, of every key binding on an items control, whether
 anything in that path can take focus: the control, its item containers, or what its item template
@@ -81,10 +86,12 @@ only what it can decide, and key bindings on other controls are not checked.
 **Read `Skipped` as well as `Inspected`.** Every result also names what the rule saw but could not
 check. For `XQ1003` that is a control with a `ControlTheme` in the scan and no part found in its
 code, a control that declares parts but has no theme in the scan, and, when the scan was given no
-assemblies at all, every themed control. For `XQ1005` it is every key binding it could not decide:
-one where a style sets focus, rows with no item template, rows that present items of their own as
-a tree's do, and content whose template the scan does not hold. None is a violation, and some are
-correct; all are places where a clean result is not what it seems.
+assemblies at all, every themed control. For `XQ1004` it is a control whose fit depends on a value
+markup cannot evaluate: a bound or resource-based definition, index, span, spacing or size, named
+in the reason. For `XQ1005` it is every key binding it could not decide: one where a style sets
+focus, rows with no item template, rows that present items of their own as a tree's do, and content
+whose template the scan does not hold. None is a violation, and some are correct; all are places
+where a clean result is not what it seems.
 
 ## Versioning
 

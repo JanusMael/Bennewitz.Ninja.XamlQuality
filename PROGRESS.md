@@ -30,6 +30,7 @@ merges only, and both give a branch's commits new hashes, so a row cites its pul
 | PR #17 | `docs/avalonia-gotchas.md` gains three `ListBox` entries from TailBlazer's port, each re-measured on Avalonia 12.1.3: the selection changes inside the press, between its tunnel and its bubble; Shift-click ranges from an anchor index that a selection made in code moves; and there is no drag selection, because the pressed row keeps the pointer | Docs only |
 | PR #18 | `docs/avalonia-gotchas.md` gains a Linux entry on driving an Avalonia application with `xdotool` under XWayland: a menu popup is its own X window, synthetic motion raises no tooltip, and keyboard accelerators do not reach the menu | Docs only |
 | PR #19 | The guidance documents stop naming the repositories that sent their entries. Attributions become neutral, and the example code's names and paths become `App`, `HarnessSandbox` and `HARNESS_WINDOW_PARK`. Links into another repository's own documents go. Facts about the family's packages stay | Docs only. A repository citing an entry by heading is unaffected, because no heading changed |
+| PR #20 | XQ1004 counts in `Inspected` only a control it measured against fixed slots. One whose fit depends on a value markup cannot evaluate, such as a bound or resource-based definition, index, span, spacing or size, is named in `Skipped` with that value, unless no fixed slot could depend on it. One in an `Auto` or `*` slot, or declaring no size, counts as neither. A `Width` of `NaN` declares no size, where it was reported as one | `Inspected` falls sharply, so a floor on it can fail. On the family's markup, 512 direct Grid children read 461 inspected before and 13 after, with 0 findings either way and 1 skip. Of the 512, 446 declare no size, 9 declare one only where the grid defines no slots, and 43 sit in `Auto` or `*` slots. DiffView's markup reads 0, where it read 22. A finding changes only on a `Width` or `Height` of `NaN`, which the framework reads as unset and is no longer reported, or on a value the framework rejects or a spacing that is not a finite number, which is no longer measured |
 
 ## Consumers inside the family
 
@@ -88,5 +89,14 @@ None open.
 
 ## Follow-ups
 
-None open. The last one, the backlog naming a candidate `XQ1005` before it was written, closed when
-`XQ1005` was.
+- **XQ1004 reads four things more narrowly than the framework.** Found while building PR #20, and
+  left for a change of their own, because each can add findings or skips on a consumer's markup:
+  - The shorthand is split at commas only. Avalonia's parser also splits at whitespace
+    (`GridLength.ParseLengths`, read from source), so `ColumnDefinitions="Auto 16 *"` reads as one
+    star column.
+  - `Grid.Row`, `Grid.Column` and the spans are read only as attributes, so one written as a
+    property element is measured as row or column 0.
+  - A control that sets a literal `MinWidth` and a larger literal `Width` is measured by its
+    `MinWidth`. The framework arranges it at the larger, unless a `MaxWidth` caps it.
+  - WPF's unit suffixes (`px`, `in`, `cm`, `pt`) are not read, so a size written with one is named
+    in `Skipped`.
