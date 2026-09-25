@@ -1,6 +1,12 @@
 namespace Bennewitz.Ninja.XamlQuality.ThemeAudit;
 
-/// <summary>The AXAML/XAML files under a directory, in ordinal path order, skipping build output, git, and any excluded directories.</summary>
+/// <summary>The AXAML/XAML files under a directory, skipping build output, git, and any excluded directories.</summary>
+/// <remarks>
+/// ⚠ <b>Ordered by the path below the directory, written with <c>/</c>, so every platform lists the
+/// same files in the same order.</b> An ordinal sort of the full path does not: <c>\</c> sorts after
+/// digits and capitals where <c>/</c> sorts before them, so on Windows <c>ControlsExtra\</c> came
+/// before <c>Controls\</c>, and the digest over the list moved with it.
+/// </remarks>
 internal static class XamlFiles
 {
     private static readonly string[] SkippedDirectories = ["bin", "obj", ".git"];
@@ -16,7 +22,7 @@ internal static class XamlFiles
                         || f.EndsWith(".xaml", StringComparison.OrdinalIgnoreCase))
             .Where(f => !IsUnderSkippedDirectory(directory, f))
             .Where(f => !excluded.Any(e => IsUnder(e, f)))
-            .Order(StringComparer.Ordinal)
+            .OrderBy(f => Path.GetRelativePath(directory, f).Replace('\\', '/'), StringComparer.Ordinal)
             .ToList();
     }
 
