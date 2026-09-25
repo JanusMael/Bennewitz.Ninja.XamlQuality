@@ -102,7 +102,8 @@ The gotchas document lives beside the rules on purpose. An entry that can be che
 promoted to a rule, and the entry keeps a line pointing at the rule's id, as `XQ1004`'s and
 `XQ1005`'s do.
 `XQ1001` and `XQ1002` began as guards hand-rolled in application test suites, not as entries.
-Other repositories contribute entries by message and cite the document by path.
+Other repositories contribute to both documents by message to the session working here, or by an
+issue when none is running, and cite them by path. Each document's header says so.
 
 ## Who consumes this
 
