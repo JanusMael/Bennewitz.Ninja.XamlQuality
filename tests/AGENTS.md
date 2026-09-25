@@ -5,7 +5,7 @@ executable on Microsoft.Testing.Platform that is never packed, with `Xunit` as a
 
 | Folder in `XamlQuality.Tests/` | What it covers |
 |---|---|
-| `Rules/` | One test class per rule in `src/XamlQuality/Rules/`, each writing its markup into a fresh temporary directory; `FocusFakes.cs` is the miniature framework `XQ1005`'s tests read through reflection. `UnloadableBuildOutputTests` covers the two rules that read compiled code, over `UnloadableAssembly.cs`: build output emitted at test time whose dependency does not load |
+| `Rules/` | One test class per rule in `src/XamlQuality/Rules/`, each writing its markup into a fresh temporary directory; `FocusFakes.cs` and `PeerFakes.cs` are the miniature frameworks `XQ1005`'s and `XQ1006`'s tests read through reflection. `UnloadableBuildOutputTests` covers the three rules that read compiled code, over `UnloadableAssembly.cs`: build output emitted at test time whose dependency does not load |
 | `ThemeAudit/` | The `ThemeAudit` analysis; the committed inputs are under `ThemeAudit/Fixtures/` (`audit`, `compat`), located through `FixturePaths.Fixture` |
 | `Packaging/` | `AssemblyQualityTests` runs the family's `Bennewitz.Ninja.AssemblyQuality` rules over both shipped assemblies; `ReleaseWorkflowTests` reads `.github/workflows/release.yml` |
 | `RulesCatalogTests.cs` | Generates, and checks, the README's rules table from the rule types |

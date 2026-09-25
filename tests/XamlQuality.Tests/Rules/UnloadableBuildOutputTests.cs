@@ -9,8 +9,9 @@ namespace XamlQuality.Tests.Rules;
 /// <remarks>
 /// ⭐ <b>A rule returns findings; it never throws.</b> Before this, <see cref="TemplatePartRule"/>
 /// threw <c>FileNotFoundException</c> from the first method body that named a type it could not load,
-/// and <see cref="KeyBindingFocusRule"/> told the consumer to pass the assembly they had passed. The
-/// fixture is <see cref="UnloadableAssembly"/>.
+/// and <see cref="KeyBindingFocusRule"/> told the consumer to pass the assembly they had passed.
+/// <see cref="CustomControlPeerRule"/> reads compiled code too, and is held to the same. The fixture
+/// is <see cref="UnloadableAssembly"/>.
 /// </remarks>
 public sealed class UnloadableBuildOutputTests : IDisposable
 {
@@ -94,6 +95,39 @@ public sealed class UnloadableBuildOutputTests : IDisposable
 
         Assert.Contains(result.Skipped, skip => skip.Subject == "Plain");
         Assert.DoesNotContain(result.Skipped, skip => skip.Subject == "Button");
+    }
+
+    /// <summary>
+    /// ⛔ XQ1006's themed control that does not load is named with what stopped it: neither reported,
+    /// which would blame a peer nobody read, nor passed over as a framework control's theme.
+    /// </summary>
+    [Fact]
+    public void XQ1006_AControlThatDoesNotLoad_IsNamedWithWhatStoppedIt()
+    {
+        XamlRuleResult result = new CustomControlPeerRule().Analyze(Scan(Themes("Thing")));
+
+        Assert.Empty(result.Findings);
+        Assert.Equal(0, result.Inspected);
+        XamlSkip skip = Assert.Single(result.Skipped);
+        Assert.Equal("Thing", skip.Subject);
+        Assert.Contains("Consumer, which the scan was given, defines it, but it could not be loaded", skip.Reason, StringComparison.Ordinal);
+        Assert.Contains("Dep could not be found", skip.Reason, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// ⛔ XQ1006 never throws on a control that loads but whose peer method cannot be resolved, here
+    /// for an overload whose parameter's type does not load. The control is named with what stopped it.
+    /// </summary>
+    [Fact]
+    public void XQ1006_APeerMethodThatCannotBeRead_IsNamedNotThrown()
+    {
+        XamlRuleResult result = new CustomControlPeerRule().Analyze(Scan(Themes("Overloaded")));
+
+        Assert.Empty(result.Findings);
+        Assert.Equal(0, result.Inspected);
+        XamlSkip skip = Assert.Single(result.Skipped);
+        Assert.Equal("Overloaded", skip.Subject);
+        Assert.Contains("Its chain could not be read: Dep could not be found", skip.Reason, StringComparison.Ordinal);
     }
 
     /// <summary>

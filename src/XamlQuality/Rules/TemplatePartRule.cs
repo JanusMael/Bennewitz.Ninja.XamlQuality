@@ -1,5 +1,4 @@
 using System.Reflection;
-using System.Xml;
 using System.Xml.Linq;
 
 namespace Bennewitz.Ninja.XamlQuality.Rules;
@@ -77,7 +76,7 @@ public sealed class TemplatePartRule : IXamlRule
             {
                 Skipped =
                 [
-                    .. ThemesIn(context).Select(theme => new XamlSkip(
+                    .. ControlThemes.In(context).Select(theme => new XamlSkip(
                         theme.Target,
                         "The scan was given no assemblies, so this control's parts could not be read and "
                         + "nothing was checked. Call WithAssemblies with the assembly that defines it.",
@@ -94,7 +93,7 @@ public sealed class TemplatePartRule : IXamlRule
         HashSet<string> themed = new(StringComparer.Ordinal);
         int inspected = 0;
 
-        foreach ((XamlFile file, XElement theme, string target, int? line) in ThemesIn(context))
+        foreach ((XamlFile file, XElement theme, string target, int? line) in ControlThemes.In(context))
         {
             themed.Add(target);
 
@@ -343,29 +342,6 @@ public sealed class TemplatePartRule : IXamlRule
         }
     }
 
-    /// <summary>Every <c>ControlTheme</c> in the scan that names a target type, with where it is.</summary>
-    private static IEnumerable<(XamlFile File, XElement Theme, string Target, int? Line)> ThemesIn(
-        XamlScanContext context)
-    {
-        foreach (XamlFile file in context.ParsedFiles)
-        {
-            foreach (XElement theme in file.Document!.Descendants()
-                         .Where(e => string.Equals(e.Name.LocalName, "ControlTheme", StringComparison.Ordinal)))
-            {
-                if (TargetTypeOf(theme) is not { } target)
-                {
-                    continue;
-                }
-
-                int? line = (theme as IXmlLineInfo).HasLineInfo()
-                    ? ((IXmlLineInfo)theme).LineNumber
-                    : null;
-
-                yield return (file, theme, target, line);
-            }
-        }
-    }
-
     /// <summary>A part name: the prefix and something after it.</summary>
     /// <remarks>
     /// ⚠ The bare prefix is not a part. <c>"PART_" + name</c> loads exactly <c>"PART_"</c>, and
@@ -378,36 +354,6 @@ public sealed class TemplatePartRule : IXamlRule
     private static bool IsLookup(string? call) =>
         call is not null
         && (call.StartsWith("Find", StringComparison.Ordinal) || call.StartsWith("Get", StringComparison.Ordinal));
-
-    /// <summary>
-    /// The control a <c>ControlTheme</c> targets, as a bare type name.
-    /// </summary>
-    /// <remarks>
-    /// ⚠ Both spellings occur and each is idiomatic: <c>TargetType="local:Thing"</c> and
-    /// <c>TargetType="{x:Type local:Thing}"</c>. Handling one silently halves the rule's reach.
-    /// </remarks>
-    private static string? TargetTypeOf(XElement theme)
-    {
-        string? raw = theme.Attributes()
-            .FirstOrDefault(a => string.Equals(a.Name.LocalName, "TargetType", StringComparison.Ordinal))
-            ?.Value;
-
-        if (string.IsNullOrWhiteSpace(raw))
-        {
-            return null;
-        }
-
-        raw = raw.Trim();
-        if (raw.StartsWith('{'))
-        {
-            // "{x:Type local:Thing}" — take the last whitespace-separated token, minus the brace.
-            raw = raw.TrimEnd('}').Split(' ', StringSplitOptions.RemoveEmptyEntries).LastOrDefault() ?? raw;
-        }
-
-        int colon = raw.LastIndexOf(':');
-        string name = colon >= 0 ? raw[(colon + 1)..] : raw;
-        return name.Length == 0 ? null : name;
-    }
 
     /// <summary>Part names declared on elements inside this theme, in either naming spelling.</summary>
     private static HashSet<string> PartsNamedUnder(XElement theme)

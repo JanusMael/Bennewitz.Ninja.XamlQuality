@@ -28,6 +28,8 @@ namespace XamlQuality.Tests.Rules;
 /// as a lambda's closure does.</item>
 /// <item><c>Plain</c> loads. It declares <c>PART_Plain</c>, and its <c>Build</c> method has a local of
 /// type <c>DepBase</c>, so reading that method's body fails.</item>
+/// <item><c>Overloaded</c> loads, and declares an <c>OnCreateAutomationPeer</c> whose parameter is a
+/// <c>DepBase</c>, so resolving that method by name fails.</item>
 /// </list>
 /// </remarks>
 internal static class UnloadableAssembly
@@ -87,6 +89,11 @@ internal static class UnloadableAssembly
         body.DeclareLocal(parent);
         body.Emit(OpCodes.Ret);
         plain.CreateType();
+
+        TypeBuilder overloaded = module.DefineType("Fixtures.Overloaded", TypeAttributes.Public | TypeAttributes.Class);
+        overloaded.DefineMethod("OnCreateAutomationPeer", MethodAttributes.Public, typeof(void), [parent])
+            .GetILGenerator().Emit(OpCodes.Ret);
+        overloaded.CreateType();
 
         consumer.Save(consumerFile);
         building.Unload();
