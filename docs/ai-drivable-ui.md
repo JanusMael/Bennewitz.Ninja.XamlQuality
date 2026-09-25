@@ -198,6 +198,8 @@ application parks its window against a screen edge and sends it to the bottom of
 has a handle (`SetWindowPos(HWND_BOTTOM, NOMOVE|NOSIZE|NOACTIVATE)`), for **every** window it opens,
 through one helper. Windows clamps a top-level window back on screen, so "off screen" is not
 available; parking plus Z-order is. Leave an opt-out for harnesses that need the foreground.
+TailBlazer's helper, [`HarnessWindowPlacement.cs`](ai-drivable-ui/HarnessWindowPlacement.cs), does all
+of this and the paragraph below.
 
 **And make the parked window impossible to activate: add `WS_EX_NOACTIVATE`.** Opening without
 activation (`ShowActivated = false`) only stops the window activating itself. When the person's own

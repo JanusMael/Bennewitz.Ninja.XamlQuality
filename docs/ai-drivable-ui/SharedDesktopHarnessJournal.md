@@ -234,8 +234,10 @@ Measured, on 33 visible top-level windows:
 - **It cannot be done when the window is constructed.** A window has no platform handle until it is
   open. In Avalonia that means hooking `Opened`; the equivalent exists in every toolkit and the
   constructor is always too early.
-- **Unsubscribe after the first fire.** `Opened` can be raised again, and sending the window to the
-  back every time would fight a person who had deliberately brought it forward to look at it.
+- **Hook it per window, and leave it hooked.** `Opened` is raised once per `Show` — Avalonia 12.1.3
+  raises it from `Show` and `ShowDialog`, never from activation — so a window shown again is parked
+  again, which is what a harness showing it again wants, and a person who brings it forward to look
+  at it is never fought.
 - **Every window the application opens has to go through one helper, not just the main one.** The
   first fix here placed the shell window and the very next run put a window back on the owner's
   screen: a modal dialog is a *different* window created somewhere else, and **`ShowDialog`
