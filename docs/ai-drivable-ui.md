@@ -4,8 +4,8 @@
 build, drive and verify a WPF-to-Avalonia port: 289 headless fixtures and 29 runtime harnesses
 that drive the real application **with no synthetic input**, run beside a person working at the
 same machine, and between them caught defects the compiler, the unit tests and code review all
-missed. The rules come first; the reasons and the traps follow. The worked examples are in the
-TailBlazer repository, branch `feature/UpgradeToNet10`, whose paths are given where they help.
+missed. The rules come first; the reasons and the traps follow. The worked examples, from
+TailBlazer's Avalonia port, are beside this guide in [`ai-drivable-ui/`](ai-drivable-ui/).
 
 **The one-line version: the application owns its automation surface, every claim is checked by the
 instrument that can actually see it, and no check is believed until it has been seen to fail.**
