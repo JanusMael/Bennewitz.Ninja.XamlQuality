@@ -7,72 +7,64 @@ released, who depends on what, and the rule backlog with any questions open for 
 
 | | |
 |---|---|
-| Published | `2026.3.924`: `Bennewitz.Ninja.XamlQuality` and `Bennewitz.Ninja.XamlQuality.ThemeAudit`, released 2026-09-24 beside AppServices and ScopedEditors. What it changed for a consumer is in its [release notes](https://github.com/JanusMael/Bennewitz.Ninja.XamlQuality/releases/tag/v2026.3.924) |
-| `main` | carries the unreleased changes below |
+| Published | `2026.3.925`: `Bennewitz.Ninja.XamlQuality` and `Bennewitz.Ninja.XamlQuality.ThemeAudit`, released 2026-09-25. What it changed for a consumer, with the old and new rule ids, is in its [release notes](https://github.com/JanusMael/Bennewitz.Ninja.XamlQuality/releases/tag/v2026.3.925) |
+| `main` | carries nothing unreleased |
 | Next release | Not scheduled; the developer decides. One release per calendar day |
 
 ### On `main`, not yet released
 
-Every change after the `v2026.3.924` tag (`808346b`) that a consumer can see; this repository's own
+Every change after the `v2026.3.925` tag (`bbd7e8c`) that a consumer can see; this repository's own
 working documents are left out. A change that makes a rule stricter or adds API goes here with its
 effect on a consumer, so the release that carries it can say so. `main` takes squash and rebase
 merges only, and both give a branch's commits new hashes, so a row cites its pull request.
 
-| Commit or PR | Change | Effect on a consumer |
-|---|---|---|
-| `964469f` | `docs/avalonia-gotchas.md` gains two UI Automation entries from the TailBlazor port: before Avalonia 12.1.3 a list's selection reaches a Windows UIA client empty, and as of 12.1.3 a `ListBox`'s `ScrollPattern` is inert | Docs only |
-| `9bb7285` | BNXQ1004 measures a control where the framework's `Grid` places it: an index past the last definition in the last one, and a span across every fixed slot it crosses plus the spacing between them. A span across an `Auto` or `*` slot, or a bound index, span or spacing, is not decidable | A control that fits the slots it spans is no longer reported, which was a false positive in `2026.3.924`. A control with an out-of-range index is now measured against the last slot and may be reported. The family's markup reads the same before and after: 459 controls, 0 findings |
-| PR #9 | `docs/avalonia-gotchas.md` stops claiming that `BNXQ1001` and `BNXQ1002` began as its entries, and `CompatMapping`'s doc comments say the reviewed mappings ship with the library | Docs only |
-| PR #10 | `BNXQ1005`, new: a key binding on an items control where nothing in its focus path can take focus, meaning the control, its item containers and what its item template holds. It reads compiled types, so it needs `WithAssemblies`, and names in `Skipped` what markup cannot decide. Measured by a real key press on Avalonia 12.1.3 under Fluent, Simple and Semi, it decides 22 of 28 arrangements, each as the key press did, and names the other 6 in `Skipped`: in every theme, 3 of those fire and 3 do not | New rule: nothing changes until a consumer constructs it. On TailBlazer, ClaudeForge, ScopedEditors, AppServices and DiffView, with their build output: 28 controls with key bindings, one on an items control (TailBlazer's log list, read as live), 0 findings, 0 skipped |
-| PR #11, PR #12 | `docs/ai-drivable-ui.md` and `docs/avalonia-gotchas.md` become the only copies of themselves, and other repositories point here. The guide gains what TailBlazer relayed: from Avalonia 12 the same peers are published on Linux over AT-SPI, a harness driving them there unverified; a parked harness window takes `WS_EX_NOACTIVATE`; and two costs a harness pays, a search from the desktop root over its descendants, and list rows read without a `CacheRequest`. It stops presenting the method as accessibility work: nothing in it tests screen-reader use, and it asks only that a control's `Name` is filled in beside its `AutomationId` | Docs only |
-| PR #13 | Both documents say in their headers that they are the one living copy, owned here, and that other repositories send what they learn to the session working here by message, or by an issue when none is running | Docs only |
-| PR #14, PR #15, PR #16 | `docs/ai-drivable-ui/` arrives with TailBlazer's harness artefacts, each adapted and approved by the owner: `Probe-UiTestEnvironment.ps1`, the shared-desktop and Windows Sandbox journals, and `HarnessWindowPlacement.cs` as a worked example. The guide links to each, gains two points on sweeps, and names that folder rather than TailBlazer's unpushed branch as the home of its worked examples. It no longer says an agent-started window never holds the foreground: it does while the session is unlocked and nobody is typing or clicking | Docs only |
-| PR #17 | `docs/avalonia-gotchas.md` gains three `ListBox` entries from TailBlazer's port, each re-measured on Avalonia 12.1.3: the selection changes inside the press, between its tunnel and its bubble; Shift-click ranges from an anchor index that a selection made in code moves; and there is no drag selection, because the pressed row keeps the pointer | Docs only |
-| PR #18 | `docs/avalonia-gotchas.md` gains a Linux entry on driving an Avalonia application with `xdotool` under XWayland: a menu popup is its own X window, synthetic motion raises no tooltip, and keyboard accelerators do not reach the menu | Docs only |
-| PR #19 | The guidance documents stop naming the repositories that sent their entries. Attributions become neutral, and the example code's names and paths become `App`, `HarnessSandbox` and `HARNESS_WINDOW_PARK`. Links into another repository's own documents go. Facts about the family's packages stay | Docs only. A repository citing an entry by heading is unaffected, because no heading changed |
-| PR #20 | BNXQ1004 counts in `Inspected` only a control it measured against fixed slots. One whose fit depends on a value markup cannot evaluate, such as a bound or resource-based definition, index, span, spacing or size, is named in `Skipped` with that value, unless no fixed slot could depend on it. One in an `Auto` or `*` slot, or declaring no size, counts as neither. A `Width` of `NaN` declares no size, where it was reported as one | `Inspected` falls sharply, so a floor on it can fail. On the family's markup, 512 direct Grid children read 461 inspected before and 13 after, with 0 findings either way and 1 skip. Of the 512, 446 declare no size, 9 declare one only where the grid defines no slots, and 43 sit in `Auto` or `*` slots. DiffView's markup reads 0, where it read 22. A finding changes only on a `Width` or `Height` of `NaN`, which the framework reads as unset and is no longer reported, or on a value the framework rejects or a spacing that is not a finite number, which is no longer measured |
-| PR #21 | `docs/avalonia-gotchas.md` gains a performance entry from TailBlazer's port: Avalonia has nothing to port WPF's `Timeline.DesiredFrameRate` to, and no public frame-rate cap. It was read in Avalonia's source at 12.1.3, and every line it cites was checked at that tag | Docs only |
-| PR #22 | ThemeAudit's digest reads each CRLF pair as LF, and a consumer's files are read in the order of their path below the scanned directory, written with `/`. DiffView found it on its Windows runner: every row cloned there hashed differently from Linux and macOS | A report generated on Windows now matches one generated on Linux or macOS. A digest made from LF checkouts does not move, which a test pins, so a report generated on Linux or macOS keeps its digests. DiffView's one-file row, re-computed from the file, gives its committed `60346377b215` from either line ending. A digest over files that have CRLF where the report was generated moves once, to the value every platform now gives |
-| PR #23 | BNXQ1003 no longer throws on build output whose dependencies do not load. A control the scanned assemblies define but could not load is named in `Skipped` with what stopped it, and one whose code could be read only in part is checked on that part and named for the rest. BNXQ1005's skip for such a control says it did not load, where it told the consumer to pass the assembly they had passed | A scan of a library's build output without its framework beside it now returns: BNXQ1003 threw `FileNotFoundException` on ScopedEditors' and DiffView's, and on DiffView's it now names the six themed controls. A theme for a control that did not load, which passed in silence when nothing threw first, is now a skip. A build whose dependencies load reads as before: TailBlazer's gives BNXQ1003 2 inspected and BNXQ1005 1, either way. Skip reasons for such controls change wording, and `XamlSkip.Subject` does not |
-| PR #24 | `docs/avalonia-gotchas.md` gains a second performance entry from TailBlazer's port: Avalonia has nothing to port WPF's `RenderCapability.Tier` to, and no public member reports whether rendering is accelerated. It was read in Avalonia's source at 12.1.3, and every claim was checked at that tag | Docs only |
-| PR #25 | `docs/avalonia-gotchas.md` gains four entries from ClaudeForge's UI style guide, each measured on Avalonia 12.1.3 or read in its source at that tag: two `TextBlock`s in different fonts do not share a baseline, where the `Run`s of one do; Semi's own strings stay Chinese until `SemiTheme.Locale` is set; a `Button` or `CheckBox` names itself with its content's raw text, the access-key underscore and any emoji included; and Avalonia 12 moved drop data to `DataTransfer`. Two entries are corrected: a parent's tooltip covers its children, as it has since 11.1.0, and an `ItemFilter` applies only in `FilterMode.Custom`, so setting `FilterMode = None` before opening does show the whole list | Docs only. Both corrected entries are retitled, so a repository citing "Tooltips don't propagate from child to parent" or "`AutoCompleteBox.ItemFilter` SUPERSEDES `FilterMode`" by heading must update it. ClaudeForge's `AGENTS.md` cites the first, and jmui rewrites that line in the change that repoints its style guide's section 14 here, held until this lands |
-| PR #26 | `docs/avalonia-gotchas.md` gains two entries from DiffView, each measured on Avalonia 12.1.3 and read in its source at that tag. A direct property is never private: one registered with `AddOwner` answers to the original owner's public field whatever its own field's visibility, the public registry lists every registration, and `PropertyChanged` carries each value. In a selector with a comma, an unqualified setter property is resolved on the alternatives' common base and fails the build, and a setter qualified with one owner reaches another control only through `AddOwner`. The second entry adds that a writable direct property can be styled by a style without an activator | Docs only |
-| PR #26 | `docs/avalonia-gotchas.md` gains two entries from TailBlazer's port, each measured on Avalonia 12.1.3: a hidden control, and every child of a hidden parent, keeps the `Bounds` it was last arranged at; and a `SplitView` closes its overlay pane on Escape only when focus is inside it. `docs/ai-drivable-ui.md`'s instrument table adds visibility to what layout bounds are blind to | Docs only |
-| PR #27 | `BNXQ1006`, new: every themed custom control gets an automation peer, or declares in its own code that it has none. It reports a control that a `ControlTheme` in the scan themes and the scanned assemblies define when nothing in its chain overrides `OnCreateAutomationPeer`: the control keeps the framework's empty peer, which a control-view search never reaches, so its `AutomationId` and `Name` reach nobody. Measured on Avalonia 12.1.3 against a subclass of every public control, that reading agreed with the peer each really got on 122 of 123; the exception, `AccessText`, returns an empty peer from an override of its own. It reads compiled types, so it needs `WithAssemblies`, and names in `Skipped` what it cannot read. `BNXQ1003`'s reading of `ControlTheme` targets moves into a helper both rules share, unchanged. Rule 3 of `docs/ai-drivable-ui.md` now names `BNXQ1006` as its check | New rule: nothing changes until a consumer constructs it. On DiffView's build at `5bd9b9a`, it inspects 6 themed controls and reports all 6, agreeing with DiffView's own measurement that no control it themes has a peer. TailBlazer's one themed control has a peer. ScopedEditors, AppServices and OpenForge2k theme no controls of their own, so it inspects nothing there. `BNXQ1003` reads the same before and after on DiffView's and TailBlazer's output |
-| PR #28 | `docs/ai-drivable-ui.md` gains a paragraph from TailBlazer's port: never maximise a parked window. Avalonia's Windows backend shows a maximised window with `SW_MAXIMIZE` whatever `ShowActivated` says, and that activates it, as Avalonia's source at 12.1.3 and the `ShowWindow` documentation show; the window coming up in front of the person's work is the port's observation | Docs only |
-| PR #29 | Every rule id takes the family's prefix, `BN` and the product's initials: `XQ1001` to `XQ1005` become `BNXQ1001` to `BNXQ1005`, numbers unchanged, and `XQ1006` ships as `BNXQ1006`, never under its old id. The owner adopted the scheme for the whole family: once an id in a family ships, its prefix never changes again. A test now fails on any rule id without the prefix | **Breaking** wherever an id is written down: a filter or suppression keyed on `XamlFinding.RuleId` or `IXamlRule.Id` stops matching until it names the new id. The release notes carry the old and new ids as a table. No code in the family's checkouts here keys on an id; ScopedEditors, OpenForge2k and Templates name them in comments and assertion messages, which read stale until they are updated |
-| PR #30 | `BNXQ1003` credits a lookup to the control whose template it is made on, whichever type's code makes it. A control that hands its template, or the template's name scope, to a helper, down a chain of calls or into a constructor, is checked against its own theme for the helper's lookups, and so is a subclass for the lookups its base class's `OnApplyTemplate` makes. A method no control hands its template to keeps its lookups as its own type's, and a parameter of type `object` does not take a template. DiffView raised it: its controller made every lookup for two views, and was named in `Skipped` with the parts only in prose | **Stricter**: a part a helper or a base class looks up on a control's template, which the control's theme omits, is now reported against that control. A helper whose lookups a control hands it is no longer named in `Skipped` for them. On DiffView's branch at `6d5c772`, the controller's skip naming 13 parts is gone, with 47 inspected and 0 findings before and after. DiffView at `5bd9b9a` and TailBlazer read the same before and after |
+Nothing yet.
 
 ## Consumers inside the family
+
+`2026.3.925` renamed the rule ids: what `2026.3.924` shipped as `XQ1001` to `XQ1004` is `BNXQ1001`
+to `BNXQ1004` from it on. Each entry below keeps the ids of the release it pins, and a consumer that
+moves its pin past `2026.3.924` renames them in its test names, messages and comments.
 
 - **ScopedEditors' tests** pin `2026.3.922`, test-only. They use
   `InteractiveAutomationNameRule(additionalElements)`, `ExpanderAutomationNameRule`,
   `XamlScanContext.Load`, `XamlFile.RelativePath` / `.Text` / `.ParseError`, and
   `XamlRuleResult.Inspected` / `.Findings`. Narrowing any of them breaks ScopedEditors once it moves
-  off `2026.3.922`, and moving to `2026.3.924` brings it the stricter XQ1001 and XQ1002.
+  off `2026.3.922`, and moving to `2026.3.924` or later brings it the stricter XQ1001 and XQ1002.
 - **ScopedEditors cites `docs/avalonia-gotchas.md` by path**, in `AppSeverityToGlyphConverter.cs` and
   its tests, `PropertyEditorWrapper.axaml` twice, and `DangerSurfaceMarkupTests.cs`. They rely on the
   entries about emoji-font fallback and about `AutomationProperties.Name` being ignored on a
   `TextBlock`. Moving or renaming the file or those entries means updating them.
 - **The documents in `docs/` are the only copies of themselves**, by the owner's decision of
   2026-09-24. TailBlazer retired its copy of the guide (`8e46a8f`) and points its `CLAUDE.md` at both
-  documents here. Templates' `PROGRESS.md` links the gotchas. ClaudeForge is retiring its pre-move
-  `docs/AVALONIA-GOTCHAS.md`, 13 entries behind this one, and repointing its links here, in
-  JanusMael/ClaudeForge#80 (open on 2026-09-24).
-  bb-skills' drivable-ui skill still carries a copy of the guide, on an unmerged branch. Moving either
-  file, or retitling a section or entry someone cites, means telling them.
+  documents here. Templates' `PROGRESS.md` links the gotchas. ClaudeForge retired its pre-move
+  `docs/AVALONIA-GOTCHAS.md` and repointed its links here in JanusMael/ClaudeForge#80, and its UI
+  style guide's section 14 points here since JanusMael/ClaudeForge#87. bb-skills' drivable-ui skill
+  points at the guide here and keeps no copy (`addad02`, on a local branch). Moving either file, or
+  retitling a section or entry someone cites, means telling them.
 - **OpenForge2k's tests**, jmui's `ClaudeForge.Tests`, pin `2026.3.924` on `main`, test-only, since
   JanusMael/ClaudeForge#77 merged on 2026-09-24, and so have the stricter XQ1001. They use
   `XamlScanContext.Load`, `ExpanderAutomationNameRule`, and `XamlRuleResult.Inspected` /
   `.Findings`.
-- **DiffView**'s tests adopt XQ1003 and XQ1004 on `2026.3.924`, by its own report on 2026-09-24 of
-  an upgrade not yet on GitHub. XQ1003 reads 34 against a floor of 20, deliberately below its
-  population: the floor guards the silent `Clean(0)` of a scan handed no assemblies, not a part
-  count. It asserts XQ1003's `Skipped` subjects are exactly `DiffPaneHeader` and `DiffStatusStrip`,
-  keyed on `XamlSkip.Subject` rather than the prose `Reason`, so narrowing either breaks it. XQ1004
-  inspects 22 controls with no findings. Its regenerated audit report's digest came out at the
-  predicted `b7ea0ec438c5`, with nothing but digests moving, so `4f7bd62`'s diagnosis was complete.
-  It proposed the peer check, which is next in the backlog's order.
+- **Templates' `bbavalonia` template** pins `2026.3.924` for the apps it generates, test-only. Their
+  `AutomationNameTests` use `XamlScanContext.Load` and `.Files`, `InteractiveAutomationNameRule()`,
+  `ExpanderAutomationNameRule`, and `XamlRuleResult.Inspected` / `.Findings`, and name XQ1001 and
+  XQ1002 in their test names and messages. Its `AGENTS.md` sends Avalonia and drivable-UI lessons
+  here.
+- **DiffView**'s tests pin `2026.3.924` on its `main` (`ec61a10`), test-only. They run XQ1002 with
+  DiffView's own element names beside `InteractiveAutomationNameRule.FrameworkInteractiveElements`,
+  and XQ1003 and XQ1004. DiffView also runs the audit and commits its report.
+  - XQ1003 reads 34 by its own report, against a floor of 20, deliberately below its population: the
+    floor guards the silent `Clean(0)` of a scan handed no assemblies, not a part count. It asserts
+    XQ1003's `Skipped` subjects are exactly `DiffPaneHeader` and `DiffStatusStrip`, keyed on
+    `XamlSkip.Subject` rather than the prose `Reason`, so narrowing either breaks it.
+  - `GridSlotTests` floors XQ1004's `Inspected` at 12 and asserts its `Skipped` is empty. Measured on
+    `ec61a10`'s markup, the published rule inspects 22 placements at `2026.3.924` and 0 at
+    `2026.3.925`, with no findings or skips at either, because `2026.3.925` counts only a control it
+    measured against fixed slots. Moving DiffView's pin fails that floor until it is re-set.
+  - Its regenerated audit report's digest came out at the predicted `b7ea0ec438c5`, with nothing but
+    digests moving, so `4f7bd62`'s diagnosis was complete. It proposed the peer check, written as
+    `BNXQ1006` in PR #27, and the reading of a helper's lookups that `BNXQ1003` gained in PR #30.
 
 ## Rule backlog
 
