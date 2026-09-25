@@ -428,4 +428,117 @@ public sealed class TemplatePartRuleTests : IDisposable
 
         Assert.Empty(RunWithoutTypes().Skipped);
     }
+
+    // ── Lookups made on a template a control hands to other code ────────────────
+
+    /// <summary>
+    /// ⭐ The case DiffView raised. A control hands its template to a helper, which makes every lookup.
+    /// They are the control's lookups, and are checked against the control's theme.
+    /// </summary>
+    [Fact]
+    public void AHelperHandedTheTemplate_HasItsLookupsCheckedAgainstTheControlsTheme()
+    {
+        Write("Host.axaml", Theme("t:HandingHost", "<Border Name=\"PART_Handed\" />"));
+
+        XamlRuleResult result = Run();
+
+        Assert.Equal(2, result.Inspected);
+        XamlFinding finding = Assert.Single(result.Findings);
+        Assert.Contains("HandingHost looks up the template part 'PART_Shared'", finding.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// The helper is no longer named for the lookups it makes on a template it is handed. A lookup no
+    /// control hands it a template for, in a handler on another control's template, stays its own.
+    /// </summary>
+    [Fact]
+    public void AHelperHandedTheTemplate_IsNamedOnlyForTheLookupsNoControlHandsIt()
+    {
+        Write("Host.axaml", Theme("t:HandingHost", "<Border Name=\"PART_Handed\" /><Border Name=\"PART_Shared\" />"));
+
+        XamlRuleResult result = Run();
+
+        Assert.Empty(result.Findings);
+        XamlSkip helper = Assert.Single(result.Skipped, skip => skip.Subject == "PartLookupHelper");
+        Assert.Contains("PART_Unhanded", helper.Reason, StringComparison.Ordinal);
+        Assert.DoesNotContain("PART_Handed", helper.Reason, StringComparison.Ordinal);
+        Assert.DoesNotContain("PART_Shared", helper.Reason, StringComparison.Ordinal);
+    }
+
+    /// <summary>Each control that hands one helper its template is checked against its own theme.</summary>
+    [Fact]
+    public void TwoControlsHandingOneHelper_AreEachChecked()
+    {
+        Write("First.axaml", Theme("t:HandingHost", "<Border Name=\"PART_Handed\" /><Border Name=\"PART_Shared\" />"));
+        Write("Second.axaml", Theme("t:SecondHandingHost", "<Border Name=\"PART_Handed\" />"));
+
+        XamlRuleResult result = Run();
+
+        Assert.Equal(4, result.Inspected);
+        XamlFinding finding = Assert.Single(result.Findings);
+        Assert.Contains("SecondHandingHost looks up the template part 'PART_Shared'", finding.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>A helper handed only the template's name scope is followed too.</summary>
+    [Fact]
+    public void AHandedNameScope_IsFollowed()
+    {
+        Write("Scope.axaml", Theme("t:ScopeHandingHost", "<Border />"));
+
+        XamlFinding finding = Assert.Single(Run().Findings);
+
+        Assert.Contains("ScopeHandingHost looks up the template part 'PART_Scoped'", finding.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>The template is followed down a chain of helpers, however deep.</summary>
+    [Fact]
+    public void AChainOfHelpers_IsFollowed()
+    {
+        Write("Chain.axaml", Theme("t:ChainHost", "<Border />"));
+
+        XamlFinding finding = Assert.Single(Run().Findings);
+
+        Assert.Contains("ChainHost looks up the template part 'PART_Chained'", finding.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// A base class's <c>OnApplyTemplate</c> runs on its subclass's template, so its lookups are the
+    /// subclass's too. Credited to the base alone, a themed subclass read as a control with no parts.
+    /// </summary>
+    [Fact]
+    public void ABaseClassesLookups_AreCheckedAgainstTheSubclassesTheme()
+    {
+        Write("Inheriting.axaml", Theme("t:InheritingHost", "<Border />"));
+
+        XamlFinding finding = Assert.Single(Run().Findings);
+
+        Assert.Contains("InheritingHost looks up the template part 'PART_FromBase'", finding.Message, StringComparison.Ordinal);
+    }
+
+    /// <summary>
+    /// ⚠ A parameter of type <see cref="object"/> takes anything, so passing the template to one is
+    /// not handing it on: the method's lookups stay its own type's.
+    /// </summary>
+    [Fact]
+    public void AnObjectParameter_DoesNotTakeTheTemplate()
+    {
+        Write("Object.axaml", Theme("t:ObjectHandingHost", "<Border />"));
+
+        XamlRuleResult result = Run();
+
+        Assert.Empty(result.Findings);
+        XamlSkip describer = Assert.Single(result.Skipped, skip => skip.Subject == nameof(Describer));
+        Assert.Contains("PART_Described", describer.Reason, StringComparison.Ordinal);
+    }
+
+    /// <summary>A helper constructed with the template is followed into its constructor.</summary>
+    [Fact]
+    public void AHelperConstructedWithTheTemplate_IsFollowed()
+    {
+        Write("Constructing.axaml", Theme("t:ConstructingHost", "<Border />"));
+
+        XamlFinding finding = Assert.Single(Run().Findings);
+
+        Assert.Contains("ConstructingHost looks up the template part 'PART_Constructed'", finding.Message, StringComparison.Ordinal);
+    }
 }

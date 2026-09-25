@@ -69,12 +69,14 @@ have been reviewed. Assert on `Inspected` to tell that apart from a clean result
 **`BNXQ1003` reads part names from compiled code.** A control's parts are the `PART_` names it
 declares as string constants, public or not, and the `PART_` string literals its code passes to a
 lookup: a call whose name starts with `Find` or `Get`, such as `NameScope.Find("PART_Foo")` or
-`GetTemplateChild`. Lambdas and controls that are not public are read too. A literal passed to
+`GetTemplateChild`. Lambdas and controls that are not public are read too. A lookup made on a template the control hands
+on, to a helper, down a chain of calls or into a constructor, or made by a base class's
+`OnApplyTemplate`, is the control's, and is checked against its theme. A literal passed to
 anything else is ignored, which is what keeps compiled XAML out: it passes every element name to
 `set_Name` and `Register`. Three limits. A name built at runtime (`"PART_" + name`) is invisible,
-and so is a lookup through a helper named otherwise. And every lookup is taken to be on the
-control's own template, so one that reaches into a child control's template is reported against
-this one.
+and so is a lookup through a helper named otherwise. And a lookup no control hands its
+template to is taken to be on its own type's template, so one that reaches into a child control's
+template is reported against that type.
 
 **`BNXQ1004` counts only what it measured.** A control in an `Auto` or `*` row or column, or one that
 declares no size, has nothing to measure, so it is neither inspected nor skipped. Markup whose grids
