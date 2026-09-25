@@ -81,6 +81,14 @@ This one is GOOD — it's how the nav-tree icon column hides on sub-items withou
            Width="18" />
 ```
 
+### A hidden control keeps the `Bounds` it was last arranged at, and so does every child of a hidden parent
+
+**Symptom:** A check that walks `GetVisualDescendants()` and reads each control's `Bounds`, such as a detector for controls that overflow their parent, reports a hidden control where it used to be. A bar centred while the window was 1000 wide, then hidden, is reported at `425..575` inside a parent 480 wide once the window is resized.
+
+**Cause:** Layout sets `Bounds` in `ArrangeCore`, and only while the control is visible. Hiding it resets its desired size, not its `Bounds`, which keep the last arranged rectangle until the control is shown and arranged again. The children of a hidden parent are not arranged either, and their own `IsVisible` stays `true`. Measured on 12.1.3, headless: a `ProgressBar` with `MinWidth="150"` and `HorizontalAlignment="Center"` sat at `425..575` in a window 1000 wide, stayed there when hidden and after the window was resized to 480, and moved to `165..315` when shown again. Inside a hidden `Border` it also stayed at `425..575`, with `IsVisible` `true` and `IsEffectivelyVisible` `false`.
+
+**Fix:** Skip a control whose `IsEffectivelyVisible` is `false` before reading its `Bounds`. Checking `IsVisible` misses the children of a hidden parent.
+
 ### There is no automatic LAYOUT CLIP — a control too big for its slot is laid out anyway, and whether it is *drawn* depends on the container
 
 **Symptom:** a child inside a `Grid` row or column smaller than the child wants does not disappear. Depending on what is above it, it is either painted on top of its neighbours or invisible-but-still-present — and in both cases it keeps its full size in the automation tree, so a UI test or a screen reader sees a pane the user cannot.
@@ -204,6 +212,16 @@ Working reference: `Button.hint-segment` / `.active` in `GuidedRuleBuilderView.a
 ```
 
 Both traps can be present at once and mask each other — fixing only the scoping still leaves the LocalValue beating the setter. If a class-driven style does nothing, check **both**.
+
+### In a selector with a comma, an unqualified setter property is looked up on the alternatives' common base
+
+**Symptom:** A style for two controls that both have a `ShowMinimap`, `<Style Selector="local|A, local|B">` with `<Setter Property="ShowMinimap" …/>`, fails to build with `AVLN2000: Unable to resolve suitable regular or attached property ShowMinimap on type …TemplatedControl`, and the runtime loader throws the same. Qualified with one control's name it builds, and can leave the other control unstyled without a word.
+
+**Cause:** The XAML compiler takes a selector with a comma to target the nearest base class its alternatives share, and resolves an unqualified setter property on that type. A qualified property, `local:A.ShowMinimap` or `(local:A.ShowMinimap)`, resolves on the named type. The setter reaches `B` only when `B` shares that property through `AddOwner`, which for a styled property registers the same property object; a `ShowMinimap` that `B` registers on its own is never set. Measured on 12.1.3, headless, with two `TemplatedControl`s: unqualified, the build failed with `AVLN2000` and the runtime loader threw the same message. Loaded at runtime, `local:A.ShowMinimap`, `local:B.ShowMinimap` and `(local:A.ShowMinimap)` each set both controls when they shared the property, as did the first when compiled, and `local:A.ShowMinimap` set only `A` when `B` registered its own.
+
+**Fix:** Qualify the setter's property with its owner, and share the property with `AddOwner` so that one setter styles every control in the selector. Where each control registers its own, give each its own style.
+
+⚠ **A direct property can be styled the same way**, when it has a setter and the style has no activator such as `:pointerover`: one setter set it on both controls. With an activator the style builds, and applying it throws `InvalidOperationException`: "Cannot set direct property … because the style has an activator." Measured the same way.
 
 ---
 
@@ -628,6 +646,14 @@ Measured on Avalonia 12.1.0, same process, same types, the only difference being
 
 ⭐ **So a partially correct column is the more dangerous shape, and it is the one an ordinary loop produces.** Read-then-force per type and everything before the first `Button` is wrong while everything after it is right, which looks like real per-type data and defeats the uniformity check. Read **every** value before forcing anything, or force everything before reading any.
 
+### A direct property is never private: one shared with `AddOwner` answers to the original owner's public field
+
+**Symptom:** A control keeps a value to itself, such as a live document it shows read-only, behind another control's direct property that it registers with `AddOwner` on an `internal` or `private` field. Code holding the other control's public field can still read the value, subscribe to it and change the object it returns, and, when the registration has a setter, set it.
+
+**Cause:** `AddOwner` gives the new registration the original's id, and properties compare equal by id. `GetValue`, `GetObservable` and `SetValue` resolve a direct property on an object by finding the registration on its type that equals the one passed in, so the public field reaches the hidden registration. A field's visibility hides nothing in any case: `AvaloniaPropertyRegistry.Instance.GetRegisteredDirect(type)` is public and lists every direct property a type has, and `PropertyChanged` carries each new value as `NewValue`, even from a type that registered nothing and raised the change through another type's property with `SetAndRaise`, where `GetValue` and `GetObservable` throw `ArgumentException`. Measured on 12.1.3, headless: through the owner's public field, `GetValue` returned the object behind a sibling's `internal` or `private` registration, a change made through that object reached the sibling, `GetObservable` streamed each new value, and `SetValue` changed the sibling's field through an `internal` registration with a setter. A fresh `private` registration was listed by the registry and read through it. With no registration, `SetAndRaise` raised `OnPropertyChanged`, `INotifyPropertyChanged`, and `PropertyChanged` with the object as `NewValue`.
+
+**Fix:** Treat every registered property, and every value raised through one, as public. Keep a value that must not leave the control out of the property system, and publish a read-only view of it if others need to see it.
+
 ### A `ContextMenu` inherits its target's `DataContext`, and `ContextRequested` BUBBLES
 
 **Symptom:** A context menu needs a command that lives outside the data context of the control it is attached to. The WPF habit is a `Tag` on the target plus a `PlacementTarget.Tag.Foo` walk.
@@ -672,6 +698,25 @@ private void OnDrop(object? sender, DragEventArgs e)
 ```
 
 `DataTransferExtensions.TryGetFiles` returns `IStorageItem[]?`, and `AsyncDataTransferExtensions.TryGetFilesAsync` does the same for an `IAsyncDataTransfer`.
+
+### A `SplitView` closes its overlay pane on Escape only when focus is inside it
+
+**Symptom:** A `SplitView` in `Overlay` or `CompactOverlay` mode, opened from a button or a view-model outside it, ignores Escape, though a click outside the pane closes it.
+
+**Cause:** `SplitView.OnKeyDown` closes an overlay pane on Escape, and has since 11.0.0, but a key reaches it only when the focused element is inside the `SplitView`, in its pane or its content. With focus outside it, or on nothing, the key never arrives. The click takes another route: while the pane is open, the `SplitView` listens for pointer releases on the whole window. Measured on 12.1.3, headless, with a real key press and `IsPaneOpen` bound two-way to a view-model: with focus on a button in the pane or in the content, Escape closed the pane in both overlay modes, and the view-model followed. With focus on a button outside the `SplitView`, or on nothing, it stayed open, and a pointer released on the content closed it.
+
+**Fix:** Move focus into the pane when it opens, or close it from a tunnelling `KeyDown` handler on the window, which sees the key wherever focus is. `SetCurrentValue` is what the `SplitView` itself uses, so a binding on `IsPaneOpen` keeps working:
+
+```csharp
+AddHandler(KeyDownEvent, (_, e) =>
+{
+    if (e.Key == Key.Escape && split.IsPaneOpen)
+    {
+        split.SetCurrentValue(SplitView.IsPaneOpenProperty, false);
+        e.Handled = true;
+    }
+}, RoutingStrategies.Tunnel);
+```
 
 ## Virtualization / perf
 
