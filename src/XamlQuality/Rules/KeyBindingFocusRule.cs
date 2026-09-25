@@ -219,9 +219,10 @@ public sealed class KeyBindingFocusRule : IXamlRule
             switch (resolved.Kind)
             {
                 case ElementKind.Missing:
-                    return Verdict.Undecided(
-                        $"{hostName} is not a type in the scanned assemblies or the assemblies they reference, so "
-                        + "whether it presents items could not be read. Pass the assembly that defines it to WithAssemblies.");
+                    return Verdict.Undecided(_types.WhyUnresolved(hostName) is { } why
+                        ? $"{why}, so whether it presents items could not be read. {LoadedTypes.Remedy}"
+                        : $"{hostName} is not a type in the scanned assemblies or the assemblies they reference, so "
+                          + "whether it presents items could not be read. Pass the assembly that defines it to WithAssemblies.");
                 case ElementKind.Ambiguous:
                     return Verdict.Undecided(
                         $"More than one type named {hostName} takes part in focus in the scanned assemblies, so which "

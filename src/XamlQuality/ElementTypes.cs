@@ -6,7 +6,7 @@ namespace Bennewitz.Ninja.XamlQuality;
 /// <summary>What an element's local name resolved to.</summary>
 internal enum ElementKind
 {
-    /// <summary>No type of that name in the scanned assemblies or the assemblies they reference.</summary>
+    /// <summary>No type of that name that loads, in the scanned assemblies or the assemblies they reference.</summary>
     Missing,
 
     /// <summary>More than one type of that name takes part in focus, so which one is meant is unknown.</summary>
@@ -61,6 +61,8 @@ internal sealed class ElementTypes
     private readonly Dictionary<Type, (bool? Focusable, string? Why)> _focusable = [];
     private readonly Dictionary<Type, Type?> _containers = [];
     private readonly Dictionary<Type, Type> _styleKeys = [];
+    private readonly Dictionary<string, (string Source, string Cause)> _notLoaded = new(StringComparer.Ordinal);
+    private readonly List<string> _unloadedReferences = [];
 
     internal ElementTypes(IReadOnlyList<Assembly> assemblies)
     {
@@ -70,7 +72,12 @@ internal sealed class ElementTypes
         {
             if (indexed.Add(assembly.GetName().Name ?? string.Empty))
             {
-                Index(assembly, _supplied);
+                LoadedTypes types = LoadedTypes.Of(assembly);
+                Index(types.Loaded, _supplied);
+                foreach ((string name, string cause) in types.NotLoaded)
+                {
+                    _notLoaded.TryAdd(name, (types.Source, cause));
+                }
             }
         }
 
@@ -78,12 +85,44 @@ internal sealed class ElementTypes
         {
             foreach (AssemblyName reference in assembly.GetReferencedAssemblies())
             {
-                if (indexed.Add(reference.Name ?? string.Empty) && Load(reference) is { } loaded)
+                if (!indexed.Add(reference.Name ?? string.Empty))
                 {
-                    Index(loaded, _referenced);
+                    continue;
+                }
+
+                if (Load(reference) is { } loaded)
+                {
+                    Index(LoadedTypes.Of(loaded).Loaded, _referenced);
+                }
+                else
+                {
+                    _unloadedReferences.Add(reference.Name ?? reference.FullName);
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// Why <paramref name="localName"/> resolved to no type, when that is known, or <c>null</c>.
+    /// </summary>
+    /// <remarks>
+    /// ⛔ <b>"Not a type in the scanned assemblies" is wrong when the scan was given it.</b> A
+    /// control whose dependencies are not beside its assembly does not load, and a message that told
+    /// the consumer to pass the assembly that defines it sent them to do what they had already done.
+    /// So a type an assembly defines but could not load is named with what stopped it, and when an
+    /// assembly the scanned ones reference could not be loaded, that is said instead.
+    /// </remarks>
+    internal string? WhyUnresolved(string localName)
+    {
+        if (_notLoaded.TryGetValue(localName, out (string Source, string Cause) notLoaded))
+        {
+            return $"{localName}, defined in {notLoaded.Source}, could not be loaded: {notLoaded.Cause}";
+        }
+
+        return _unloadedReferences.Count == 0
+            ? null
+            : $"{localName} is not a type in the scanned assemblies, and {LoadedTypes.List(_unloadedReferences)}, "
+              + "which they reference, could not be loaded";
     }
 
     /// <summary>What <paramref name="localName"/> names: the supplied assemblies first, then what they reference.</summary>
@@ -345,9 +384,9 @@ internal sealed class ElementTypes
         }
     }
 
-    private static void Index(Assembly assembly, Dictionary<string, List<Type>> index)
+    private static void Index(IEnumerable<Type> loaded, Dictionary<string, List<Type>> index)
     {
-        foreach (Type type in TypesOf(assembly))
+        foreach (Type type in loaded)
         {
             // Markup names top-level types; <Module> and friends are the compiler's. A type whose
             // dependencies do not load cannot even say whether it is nested, and is left out.
@@ -363,23 +402,6 @@ internal sealed class ElementTypes
             }
 
             types.Add(type);
-        }
-    }
-
-    private static IEnumerable<Type> TypesOf(Assembly assembly)
-    {
-        try
-        {
-            return assembly.GetTypes();
-        }
-        catch (ReflectionTypeLoadException ex)
-        {
-            // A type whose dependencies do not load is left out rather than failing the whole scan.
-            return ex.Types.OfType<Type>();
-        }
-        catch (Exception ex) when (IsUnreadable(ex))
-        {
-            return [];
         }
     }
 
