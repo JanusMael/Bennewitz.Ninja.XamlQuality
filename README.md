@@ -43,6 +43,7 @@ people stop referencing.
 | `XQ1003` | Every template part a control looks up is declared in its own theme. |
 | `XQ1004` | Every control fits the fixed Grid slot it is placed in. |
 | `XQ1005` | Every key binding on an items control sits where keyboard focus can reach it. |
+| `XQ1006` | Every themed custom control gets an automation peer, or declares in its own code that it has none. |
 <!-- END GENERATED RULES -->
 
 The table above is rendered from the rule types — `Id` and `Summary` on each `IXamlRule` — and a
@@ -83,6 +84,15 @@ and whether an element presents items at all are read from compiled types. Pass 
 own assembly to `WithAssemblies`; the framework is reached through its references. The rule reports
 only what it can decide, and key bindings on other controls are not checked.
 
+**`XQ1006` is what makes the names count.** A name `XQ1001` or `XQ1002` requires on a custom control
+reaches nobody when the control has no automation peer: the framework's default gives an empty one,
+which a control-view search never finds. So the rule asks, of every control that a `ControlTheme` in
+the scan themes and the scanned assemblies define, whether anything in its chain overrides
+`OnCreateAutomationPeer`: the control itself, a base of your own, or a framework base that gives a
+peer, as `Button` does and `TemplatedControl` and `ContentControl` do not. A decorative control opts
+out by overriding it to return the empty peer, which says so in the control's own code. Pass the
+application's assembly to `WithAssemblies`, from a process that can load its framework.
+
 **Read `Skipped` as well as `Inspected`.** Every result also names what the rule saw but could not
 check. For `XQ1003` that is a control with a `ControlTheme` in the scan and no part found in its
 code, a control that declares parts but has no theme in the scan, one the scanned assemblies define
@@ -91,8 +101,11 @@ assemblies at all, every themed control. For `XQ1004` it is a control whose fit 
 markup cannot evaluate: a bound or resource-based definition, index, span, spacing or size, named
 in the reason. For `XQ1005` it is every key binding it could not decide: one where a style sets
 focus, rows with no item template, rows that present items of their own as a tree's do, and content
-whose template the scan does not hold. None is a violation, and some are correct; all are places
-where a clean result is not what it seems.
+whose template the scan does not hold. For `XQ1006` it is a themed control that did not load or
+whose peer method could not be read, a name more than one scanned type carries, a type with no
+`OnCreateAutomationPeer` at all, and, when the scan was given no assemblies, every themed control.
+None is a violation, and some are correct; all are places where a clean result is not what it
+seems.
 
 ## Versioning
 

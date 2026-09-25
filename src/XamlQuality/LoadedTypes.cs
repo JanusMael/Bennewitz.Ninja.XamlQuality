@@ -155,7 +155,7 @@ internal sealed record LoadedTypes(
     }
 
     /// <summary>A loaded type's name as markup would write it, or <c>null</c> for a nested or compiler-generated type.</summary>
-    private static string? TopLevelName(Type type)
+    internal static string? TopLevelName(Type type)
     {
         try
         {
