@@ -229,6 +229,15 @@ public static class AuditRunner
     /// A short content digest over files in order — relative path and bytes — so the report
     /// changes whenever a pin bump changes what was audited, and only then.
     /// </summary>
+    /// <remarks>
+    /// ⚠ <b>Line endings are how a checkout is made, not what was audited.</b> Git on a Windows
+    /// runner writes a text file's LF as CRLF, so hashing raw bytes gave every row cloned there a
+    /// digest of its own. Measured on one consumer's CI, and reproduced from the file itself: a
+    /// one-file row hashed <c>60346377b215</c> on Linux and macOS and <c>63465b5f74f7</c> on Windows,
+    /// which is exactly the digest of the same file with its LF written as CRLF. So every CRLF pair is
+    /// hashed as LF. A lone CR is content and is hashed as it is, and a file with no CRLF hashes
+    /// exactly as it always has, so a report made from LF checkouts keeps its digests.
+    /// </remarks>
     public static string Digest(string root, IReadOnlyList<string> files)
     {
         using IncrementalHash hash = IncrementalHash.CreateHash(HashAlgorithmName.SHA256);
@@ -237,10 +246,33 @@ public static class AuditRunner
             string relative = Path.GetRelativePath(root, file).Replace('\\', '/');
             hash.AppendData(Encoding.UTF8.GetBytes(relative));
             hash.AppendData([0]);
-            hash.AppendData(File.ReadAllBytes(file));
+            hash.AppendData(WithLineFeeds(File.ReadAllBytes(file)));
             hash.AppendData([0]);
         }
 
         return Convert.ToHexStringLower(hash.GetHashAndReset())[..12];
+    }
+
+    /// <summary><paramref name="bytes"/> with every CRLF pair written as LF, or the same array when there is none.</summary>
+    private static byte[] WithLineFeeds(byte[] bytes)
+    {
+        int pairs = 0;
+        for (int i = 0; i + 1 < bytes.Length; i++)
+        {
+            if (bytes[i] == (byte)'\r' && bytes[i + 1] == (byte)'\n') { pairs++; }
+        }
+
+        if (pairs == 0) { return bytes; }
+
+        byte[] result = new byte[bytes.Length - pairs];
+        int written = 0;
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            if (bytes[i] == (byte)'\r' && i + 1 < bytes.Length && bytes[i + 1] == (byte)'\n') { continue; }
+
+            result[written++] = bytes[i];
+        }
+
+        return result;
     }
 }
