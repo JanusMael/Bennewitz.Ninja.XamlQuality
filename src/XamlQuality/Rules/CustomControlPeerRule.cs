@@ -12,7 +12,7 @@ namespace Bennewitz.Ninja.XamlQuality.Rules;
 /// framework's default <c>OnCreateAutomationPeer</c> gives a control an empty peer: Avalonia's
 /// <c>Control</c> returns a <c>NoneAutomationPeer</c>, which is not a control element, so a search of
 /// the control view never finds the control, its <c>AutomationId</c> or its <c>Name</c>. A name gate
-/// such as <c>XQ1001</c> stays green over a control nobody can reach. Measured on Avalonia 12.1.3,
+/// such as <c>BNXQ1001</c> stays green over a control nobody can reach. Measured on Avalonia 12.1.3,
 /// headless: a <c>TemplatedControl</c> subclass carrying an <c>AutomationId</c> was in the peer tree
 /// with <c>IsControlElement</c> false, and the same control with a peer of its own was a control
 /// element. Content inside a peer-less control stays reachable; the control itself does not.
@@ -40,7 +40,7 @@ namespace Bennewitz.Ninja.XamlQuality.Rules;
 /// </para>
 /// <para>
 /// ⚠ <b>The controls checked are the ones the scanned markup themes</b>, through a
-/// <c>ControlTheme</c> whose target the scanned assemblies define, matched by name as <c>XQ1003</c>
+/// <c>ControlTheme</c> whose target the scanned assemblies define, matched by name as <c>BNXQ1003</c>
 /// matches them. A theme for a type the scan was not given is a framework's or another package's, and
 /// not the scan's to explain. What the rule sees but cannot read is named in
 /// <see cref="XamlRuleResult.Skipped"/>: every themed control when the scan was given no assemblies, a
@@ -53,7 +53,7 @@ public sealed class CustomControlPeerRule : IXamlRule
     private const string PeerMethod = "OnCreateAutomationPeer";
 
     /// <inheritdoc />
-    public string Id => "XQ1006";
+    public string Id => "BNXQ1006";
 
     /// <inheritdoc />
     public string Summary => "Every themed custom control gets an automation peer, or declares in its own code that it has none.";

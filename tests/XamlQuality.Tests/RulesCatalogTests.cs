@@ -11,12 +11,12 @@ namespace XamlQuality.Tests;
 /// row.</b> Nothing in this library holds <see cref="IXamlRule"/> in a collection — there is no
 /// registry, and a consumer names each rule directly — so that table is the only enumeration of
 /// the rules that exists anywhere. A rule missing from it ships invisible. That is not
-/// hypothetical: <c>XQ1002</c> was added and the table was not, and nothing failed.
+/// hypothetical: <c>BNXQ1002</c> was added and the table was not, and nothing failed.
 /// </para>
 /// <para>
 /// ⚠ <b>Only the marked region is generated.</b> Whether two rules overlap is a fact about the
-/// PAIR, not about either type, so no amount of reflection can emit it — <c>XQ1002</c> excludes
-/// <c>Expander</c> because <c>XQ1001</c> already covers it. That prose is hand-written and lives
+/// PAIR, not about either type, so no amount of reflection can emit it — <c>BNXQ1002</c> excludes
+/// <c>Expander</c> because <c>BNXQ1001</c> already covers it. That prose is hand-written and lives
 /// OUTSIDE the markers; a generator that owned the whole section would delete it.
 /// </para>
 /// <para>
@@ -64,9 +64,9 @@ public sealed class RulesCatalogTests
     {
         IReadOnlyList<IXamlRule> rules = DiscoverRules();
 
-        Assert.Contains(rules, rule => rule.Id == "XQ1001");
-        Assert.Contains(rules, rule => rule.Id == "XQ1002");
-        Assert.Contains(rules, rule => rule.Id == "XQ1003");
+        Assert.Contains(rules, rule => rule.Id == "BNXQ1001");
+        Assert.Contains(rules, rule => rule.Id == "BNXQ1002");
+        Assert.Contains(rules, rule => rule.Id == "BNXQ1003");
     }
 
     /// <summary>
@@ -79,6 +79,17 @@ public sealed class RulesCatalogTests
         string[] ids = [.. DiscoverRules().Select(rule => rule.Id)];
 
         Assert.Equal(ids.Length, ids.Distinct(StringComparer.Ordinal).Count());
+    }
+
+    /// <summary>
+    /// ⛔ Every id carries the family's prefix: <c>BN</c>, then <c>XQ</c> for this product, then a
+    /// four-digit number. A rule added with the old <c>XQ</c> prefix, or any other, would ship an id
+    /// the scheme says can never change again.
+    /// </summary>
+    [Fact]
+    public void EveryRuleId_CarriesTheFamilyPrefix()
+    {
+        Assert.All(DiscoverRules(), rule => Assert.Matches("^BNXQ[0-9]{4}$", rule.Id));
     }
 
     /// <summary>

@@ -47,7 +47,7 @@ public sealed class InteractiveAutomationNameRuleTests : IDisposable
 
         Assert.Equal(1, result.Inspected);
         XamlFinding finding = Assert.Single(result.Findings);
-        Assert.Equal("XQ1002", finding.RuleId);
+        Assert.Equal("BNXQ1002", finding.RuleId);
         Assert.Contains("Button", finding.Message, StringComparison.Ordinal);
     }
 
@@ -157,7 +157,7 @@ public sealed class InteractiveAutomationNameRuleTests : IDisposable
 
         XamlRuleResult result = Run();
 
-        // XQ1001 owns this one; reporting it here too would show one defect twice.
+        // BNXQ1001 owns this one; reporting it here too would show one defect twice.
         Assert.Empty(result.Findings);
         Assert.Equal(0, result.Inspected);
     }

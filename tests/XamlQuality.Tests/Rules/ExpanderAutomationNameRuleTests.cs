@@ -47,7 +47,7 @@ public sealed class ExpanderAutomationNameRuleTests : IDisposable
 
         Assert.Equal(1, result.Inspected);
         XamlFinding finding = Assert.Single(result.Findings);
-        Assert.Equal("XQ1001", finding.RuleId);
+        Assert.Equal("BNXQ1001", finding.RuleId);
         Assert.Contains("Bad.axaml", finding.RelativePath, StringComparison.Ordinal);
     }
 
@@ -82,7 +82,7 @@ public sealed class ExpanderAutomationNameRuleTests : IDisposable
 
     /// <summary>
     /// ⛔ The same bar for the element spelling: an empty property element is as empty as
-    /// <c>Name=""</c>. The helper is shared with XQ1002, so this is also the check that the two rules
+    /// <c>Name=""</c>. The helper is shared with BNXQ1002, so this is also the check that the two rules
     /// have not drifted apart.
     /// </summary>
     [Fact]

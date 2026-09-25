@@ -144,7 +144,7 @@ public sealed class TemplatePartRuleTests : IDisposable
 
         Assert.Equal(2, result.Inspected);
         XamlFinding finding = Assert.Single(result.Findings);
-        Assert.Equal("XQ1003", finding.RuleId);
+        Assert.Equal("BNXQ1003", finding.RuleId);
         Assert.Contains("PART_Footer", finding.Message, StringComparison.Ordinal);
     }
 

@@ -30,7 +30,7 @@ namespace Bennewitz.Ninja.XamlQuality.Rules;
 public sealed class ExpanderAutomationNameRule : IXamlRule
 {
     /// <inheritdoc />
-    public string Id => "XQ1001";
+    public string Id => "BNXQ1001";
 
     /// <inheritdoc />
     public string Summary => "Every Expander declares AutomationProperties.Name.";

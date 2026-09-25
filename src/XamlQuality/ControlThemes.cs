@@ -7,8 +7,8 @@ namespace Bennewitz.Ninja.XamlQuality;
 /// The <c>ControlTheme</c>s a scan's markup declares, each with the control it targets and where it is.
 /// </summary>
 /// <remarks>
-/// ⭐ <b>One reading for every rule that asks which controls are themed.</b> XQ1003 checks a themed
-/// control's parts and XQ1006 its automation peer, and two readings of <c>TargetType</c> would drift
+/// ⭐ <b>One reading for every rule that asks which controls are themed.</b> BNXQ1003 checks a themed
+/// control's parts and BNXQ1006 its automation peer, and two readings of <c>TargetType</c> would drift
 /// apart on the spelling one of them forgot.
 /// </remarks>
 internal static class ControlThemes

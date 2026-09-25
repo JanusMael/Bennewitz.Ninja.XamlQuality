@@ -40,11 +40,11 @@ public sealed class UnloadableBuildOutputTests : IDisposable
         + $"<KeyBinding Gesture=\"Ctrl+K\" /></{host}.KeyBindings></{host}></UserControl>";
 
     /// <summary>
-    /// ⛔ XQ1003's control whose base type does not load is named with what stopped it. Read as a
+    /// ⛔ BNXQ1003's control whose base type does not load is named with what stopped it. Read as a
     /// framework control, as it was, its theme was passed over in silence.
     /// </summary>
     [Fact]
-    public void XQ1003_AControlThatDoesNotLoad_IsNamedWithWhatStoppedIt()
+    public void BNXQ1003_AControlThatDoesNotLoad_IsNamedWithWhatStoppedIt()
     {
         XamlRuleResult result = new TemplatePartRule().Analyze(Scan(Themes("Thing")));
 
@@ -60,7 +60,7 @@ public sealed class UnloadableBuildOutputTests : IDisposable
     /// still read and checked, and the control is named for the code that could not be.
     /// </summary>
     [Fact]
-    public void XQ1003_AMethodWhoseLocalsDoNotLoad_CostsOnlyItself()
+    public void BNXQ1003_AMethodWhoseLocalsDoNotLoad_CostsOnlyItself()
     {
         XamlRuleResult result = new TemplatePartRule().Analyze(Scan(Themes("Plain")));
 
@@ -78,7 +78,7 @@ public sealed class UnloadableBuildOutputTests : IDisposable
     /// shows the assembly's types were read.
     /// </summary>
     [Fact]
-    public void XQ1003_ANestedTypeWhoseOwnerDoesNotLoad_DoesNotThrow()
+    public void BNXQ1003_ANestedTypeWhoseOwnerDoesNotLoad_DoesNotThrow()
     {
         XamlRuleResult result = new TemplatePartRule().Analyze(Scan(Themes()));
 
@@ -89,7 +89,7 @@ public sealed class UnloadableBuildOutputTests : IDisposable
 
     /// <summary>⚠ A theme for a type the scanned assemblies do not define is still not the scan's to explain.</summary>
     [Fact]
-    public void XQ1003_AFrameworkControlsTheme_IsStillNotExplained()
+    public void BNXQ1003_AFrameworkControlsTheme_IsStillNotExplained()
     {
         XamlRuleResult result = new TemplatePartRule().Analyze(Scan(Themes("Button")));
 
@@ -98,11 +98,11 @@ public sealed class UnloadableBuildOutputTests : IDisposable
     }
 
     /// <summary>
-    /// ⛔ XQ1006's themed control that does not load is named with what stopped it: neither reported,
+    /// ⛔ BNXQ1006's themed control that does not load is named with what stopped it: neither reported,
     /// which would blame a peer nobody read, nor passed over as a framework control's theme.
     /// </summary>
     [Fact]
-    public void XQ1006_AControlThatDoesNotLoad_IsNamedWithWhatStoppedIt()
+    public void BNXQ1006_AControlThatDoesNotLoad_IsNamedWithWhatStoppedIt()
     {
         XamlRuleResult result = new CustomControlPeerRule().Analyze(Scan(Themes("Thing")));
 
@@ -115,11 +115,11 @@ public sealed class UnloadableBuildOutputTests : IDisposable
     }
 
     /// <summary>
-    /// ⛔ XQ1006 never throws on a control that loads but whose peer method cannot be resolved, here
+    /// ⛔ BNXQ1006 never throws on a control that loads but whose peer method cannot be resolved, here
     /// for an overload whose parameter's type does not load. The control is named with what stopped it.
     /// </summary>
     [Fact]
-    public void XQ1006_APeerMethodThatCannotBeRead_IsNamedNotThrown()
+    public void BNXQ1006_APeerMethodThatCannotBeRead_IsNamedNotThrown()
     {
         XamlRuleResult result = new CustomControlPeerRule().Analyze(Scan(Themes("Overloaded")));
 
@@ -131,11 +131,11 @@ public sealed class UnloadableBuildOutputTests : IDisposable
     }
 
     /// <summary>
-    /// ⛔ XQ1005 says the control is there and did not load. It said the control was not in the
+    /// ⛔ BNXQ1005 says the control is there and did not load. It said the control was not in the
     /// assemblies the scan was given, and told the consumer to pass the one they had passed.
     /// </summary>
     [Fact]
-    public void XQ1005_AControlThatDoesNotLoad_SaysSo_NotThatItWasNotPassed()
+    public void BNXQ1005_AControlThatDoesNotLoad_SaysSo_NotThatItWasNotPassed()
     {
         XamlRuleResult result = new KeyBindingFocusRule().Analyze(Scan(KeyBindingOn("Thing")));
 
@@ -146,7 +146,7 @@ public sealed class UnloadableBuildOutputTests : IDisposable
 
     /// <summary>⚠ A type in an assembly the scanned ones reference, which did not load, is named as that.</summary>
     [Fact]
-    public void XQ1005_AReferencedAssemblyThatDoesNotLoad_IsNamed()
+    public void BNXQ1005_AReferencedAssemblyThatDoesNotLoad_IsNamed()
     {
         XamlRuleResult result = new KeyBindingFocusRule().Analyze(Scan(KeyBindingOn("DepBase")));
 
