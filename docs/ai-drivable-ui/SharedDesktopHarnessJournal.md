@@ -1,7 +1,7 @@
 # Running UI-automation harnesses on a desktop somebody is using
 
 *An account of making a shared machine a working environment for UI Automation tests, written while
-doing it in TailBlazer's Avalonia port from 2026-09-21. "Here" means that port, on that machine.*
+doing it in a WPF-to-Avalonia port from 2026-09-21. "Here" means that port, on that machine.*
 
 *The companion to [SandboxHarnessJournal.md](SandboxHarnessJournal.md), which covers the other
 half of the problem. That one is about **input isolation**; this one is about **everything else**.*
@@ -33,7 +33,7 @@ which approaches are available at all**, and it can change under you between one
 | **D** | **Fully headless toolkit rendering** (Avalonia.Headless and similar) | Nothing | Anything about real windows: chrome, focus, Z-order, the window manager |
 
 **Prefer A, and count how many of your harnesses genuinely need B.** Counted by what each one does,
-on 2026-09-24, TailBlazer's Avalonia set is 29 harnesses: none sends input, and two need the
+on 2026-09-24, the port's Avalonia set is 29 harnesses: none sends input, and two need the
 foreground. That ratio is the whole reason a shared desktop is workable here — and it was
 miscounted for weeks, because the count was taken by grepping for one tool's name rather than by
 asking what each harness *does*.
@@ -91,7 +91,7 @@ X11 (or XWayland) client.
 
 What exists instead is compositor-specific: virtual-pointer and virtual-keyboard protocols that some
 compositors implement and others do not, and headless compositors (`cage`, `weston --backend=headless`,
-`labwc`) for the isolated-desktop role. **None of this is verified in TailBlazer** — its harnesses
+`labwc`) for the isolated-desktop role. **None of this is verified in the port** — its harnesses
 are Windows-only — so treat the previous sentence as a starting point for your own
 measurement rather than as a finding. **The point that does carry: a suite built on synthetic input
 is a suite that may not port to the platform you are porting to**, and finding that out after
@@ -102,7 +102,7 @@ writing thirty of them is expensive.
 - **Probe, then choose.** [`Probe-UiTestEnvironment.ps1`](Probe-UiTestEnvironment.ps1) reports the
   four answers: on Windows by asking the system, elsewhere from `$WAYLAND_DISPLAY`, `$DISPLAY`,
   `$XDG_SESSION_TYPE` and `$SSH_CONNECTION`.
-- **Record the answers with every result.** See *Record the session type* below — TailBlazer has
+- **Record the answers with every result.** See *Record the session type* below — the port has
   an incident record it cannot split by session type because nobody wrote it down.
 - **Re-probe rather than remember.** The same machine here was console at one hour and RDP the next,
   at different resolutions and different scaling, which changed what a harness could do *and* what
@@ -112,11 +112,11 @@ writing thirty of them is expensive.
 
 A UI-automation harness starts the real application and asserts on what it actually does. That is
 the whole point of it — a green unit suite is not evidence a desktop application works, and
-TailBlazer shipped a feature with thirty-six passing tests that did not work at all.
+the port shipped a feature with thirty-six passing tests that did not work at all.
 
 But starting an application gives its window the foreground, whenever the session is unlocked and
 nobody is giving it input (measured, above). **Not because any harness asks for it**:
-`SetForegroundWindow` appears in none of TailBlazer's Avalonia harnesses. It is simply what starting
+`SetForegroundWindow` appears in none of the port's Avalonia harnesses. It is simply what starting
 a process does. A sweep of two dozen harnesses is two dozen windows
 appearing over whatever the owner is doing, and on 2026-09-21 the owner stopped the work twice over
 exactly that.
@@ -124,7 +124,7 @@ exactly that.
 **Windows Sandbox is the obvious answer and it is usually the wrong one.** The sandbox exists for
 input isolation — for harnesses that send real keystrokes and mouse events, which would otherwise
 land in whatever the owner is typing into. Harnesses that drive the application through UI
-Automation send none. TailBlazer's never needed the isolation, and reaching for a sandbox to solve a
+Automation send none. The port's never needed the isolation, and reaching for a sandbox to solve a
 *foreground* problem costs a virtual machine, thirty minutes, and — on this host — three occasions
 when it took the whole machine down.
 
@@ -244,13 +244,13 @@ Measured, on 33 visible top-level windows:
   activates its window whatever `ShowActivated` says.** A fix for "windows appear" has to enumerate
   the windows rather than fix the one in front of you.
 - **Gate it on an environment variable the harness sets and restores**, so the behaviour exists only
-  while a harness is driving and the application a person runs is untouched. In TailBlazer
-  `TAILBLAZER_WINDOW_PARK` — taking `right` or `left` — is set by the harness helper's
+  while a harness is driving and the application a person runs is untouched. In the port
+  `HARNESS_WINDOW_PARK` — taking `right` or `left` — is set by the harness helper's
   `Enter-HarnessSettings` and put back by `Exit-HarnessSettings`, the same save-and-restore the
   isolated settings folder already gets. **No harness was edited**, because they all already pass
   through that helper.
 - **Leave an opt-out.** Harnesses that send real keystrokes need a window that can receive them.
-  TailBlazer's is `-OnScreen`, and two harnesses use it.
+  The port's is `-OnScreen`, and two harnesses use it.
 
 ### Capture is unaffected, and that is the fact the whole thing rests on
 
@@ -289,7 +289,7 @@ Separately, and on the *same* display: two runs of one harness within an hour re
 At 192 DPI a **DPI-unaware** process is handed virtualized coordinates. `GetWindowRect` then sizes
 the capture bitmap at half, `PrintWindow` draws at physical scale into it, and **only the window's
 top-left quadrant is captured** — so the saved image is cut off mid-sentence and a sample taken at a
-fixed offset lands somewhere else entirely. In TailBlazer's case it read the title bar where the toolbar is,
+fixed offset lands somewhere else entirely. In the port's case it read the title bar where the toolbar is,
 and the run was very nearly written up as a regression in code that was provably correct.
 
 ### The mechanism is "system aware", and you probably cannot fix it at the process
@@ -339,7 +339,7 @@ that makes an intermittent hazard unreadable a month later. **One line per entry
 
 Harnesses that need the real application are usually run one at a time, by whoever is working on the
 thing that harness covers. Nothing runs them as a set unless somebody writes the runner —
-TailBlazer's sandbox runner deliberately refuses every harness that drives the Avalonia build, so for that set
+the port's sandbox runner deliberately refuses every harness that drives the Avalonia build, so for that set
 there was no runner at all.
 
 The cost of not having one, over six steps of a UI port: **two harnesses reddened by a peer change,
@@ -370,5 +370,5 @@ making it work.
 
 The division that has held here: **drive through UI Automation and you can run on a shared desktop;
 send real input and you need isolation.** Counting which harnesses do which by what they *do* rather
-than by which helper they call is worth the five minutes — TailBlazer's own count was wrong for
+than by which helper they call is worth the five minutes — the port's own count was wrong for
 weeks because it was taken by grepping for one tool's name.
