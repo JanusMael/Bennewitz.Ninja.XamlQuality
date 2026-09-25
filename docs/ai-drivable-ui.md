@@ -128,6 +128,10 @@ wrong finding the TailBlazer port ever published.
 display server and the scaling, then which approaches the machine supports. The same host can be a
 console session one hour and a Remote Desktop session the next, with different answers.
 
+**Windows Sandbox, for the few harnesses that must send real input**, has its own account, from the
+host takedowns to the setting behind them:
+[SandboxHarnessJournal.md](ai-drivable-ui/SandboxHarnessJournal.md).
+
 **Prefer the first two, and count the rest by what each harness DOES, not by which helper it calls.**
 TailBlazer's Avalonia set is 29 harnesses; none sends input and two need the foreground. The count
 was wrong for weeks when it was taken by grepping for a tool's name.
