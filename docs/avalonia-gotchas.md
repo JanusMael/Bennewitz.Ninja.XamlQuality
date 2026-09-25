@@ -534,6 +534,36 @@ The rule names some arrangements in `Skipped` instead of deciding them, and thos
 
 A binding on a control that is not an items control is not checked at all. A `Border` or `UserControl` holding only text is just as dead (0 runs), but deciding that needs every template beneath it.
 
+### A `ListBox` changes its selection INSIDE the press, so read what a click selected in the bubble
+
+**Symptom:** A handler reacting to a click on a row reads the selection from before the click. Or code that clears its own state on the press, and waits for `SelectionChanged` to fill it again, is left empty when the row clicked was already the only one selected.
+
+**Cause:** The selection changes between the two halves of `PointerPressed`. With handlers on the `ListBox` in both phases and `handledEventsToo`, one plain click on a row logs, in order: the tunnel `PointerPressed`, not handled, with the old selection; `SelectionChanged`; then the bubble `PointerPressed`, already handled, with the new selection. And a plain click on the only selected row changes nothing, so it raises no `SelectionChanged` at all.
+
+**Fix:** Read what a click selected in a bubble handler added with `handledEventsToo: true`, where the selection has settled. Never arm state on the press and wait for `SelectionChanged` to complete it: a click that changes nothing sends none.
+
+Measured on Avalonia 12.1.3, headless with Skia and the Fluent theme: a `ListBox` of eight strings in `SelectionMode="Multiple"`, with pointer input raised through `HeadlessWindowExtensions`. From TailBlazer's port, re-measured here.
+
+### Shift-click ranges from the ANCHOR INDEX, and a selection made in code moves the anchor
+
+**Symptom:** A Shift-click selects the wrong range, from a row other than the one the person last clicked, or from the right row number while it shows a different item.
+
+**Cause:** Shift-click ranges from `Selection.AnchorIndex`, an index, and replaces the selection rather than adding to it. From rows 2 and 4 selected, with the anchor at 4 from a Ctrl-click, Shift-clicking 6 selects 4, 5 and 6 and drops 2. Shift-clicking 1 then selects 1 to 4, and the anchor stays at 4. Adding to `SelectedItems` in code moves the anchor to the added index: with the anchor at 1, adding item 6 moved it to 6, and the next Shift-click on 3 selected 3 to 6.
+
+**Fix:** Where the item under a container can change, as in a virtualised list whose slots are re-pointed at new content as it scrolls, the anchor index names a different item after a scroll: keep your own anchor, by item identity. ⚠ In a test, a selection made in code before a Shift-click moves the anchor, so it can make the range come out right with the feature missing. It made one TailBlazer test pass that way.
+
+Measured the same way as the entry above.
+
+### A `ListBox` has no drag selection, and the pressed row keeps the pointer
+
+**Symptom:** Dragging across rows selects only the row the drag began on, and every `PointerMoved` handler reports that first row, never the row under the pointer.
+
+**Cause:** Pressing a row captures the pointer to it. Every `PointerMoved` of the gesture reports the pressed row's `ContentPresenter` as both `e.Source` and `e.Pointer.Captured`. Pressing row 1, moving over 3 and 5 and releasing on 5 selects row 1 alone. Under the Fluent theme `e.Source` is never the `ListBoxItem` itself, so a handler testing `e.Source is ListBoxItem` matches nothing.
+
+**Fix:** Hit-test for the row under the pointer: `listBox.InputHitTest(e.GetPosition(listBox))`, then `FindAncestorOfType<ListBoxItem>(includeSelf: true)`. That found rows 3 and 5 in the same gesture.
+
+Measured the same way as the two entries above.
+
 ### `AvaloniaProperty` metadata reads its BASE default until the type's static constructor has run
 
 **Symptom:** A reflection sweep reports `Focusable` defaults to `false` for every control — `Button`, `TextBox`, `ComboBox`, `MenuItem`, all of them — which would mean nothing in Avalonia is focusable.
