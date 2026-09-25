@@ -218,6 +218,19 @@ activation, so set it on every parked window the application owns, never on one 
 foreground opt-out. **A modal dialog is the one case it cannot cover**: `ShowDialog` activates its
 window whatever it is asked, so a harness that opens one takes focus once per dialog.
 
+**Never maximise a parked window.** A maximised window fills the screen, so the parked position no
+longer applies, and it takes the foreground whatever `ShowActivated` says. Avalonia's Windows backend
+shows a normal window without activating it when asked (`SW_SHOWNOACTIVATE`), but a maximised one
+with `SW_MAXIMIZE` either way, which the `ShowWindow` documentation says activates the window; and
+setting `WindowState` to `Maximized` on a window already shown asks for activation outright. Both
+are read in Avalonia's source at 12.1.3. Parking comes too late to help: it runs on `Opened`, after
+the show. In the port, on Windows 11, a window restored from a layout saved maximised came up full
+screen in front of the person's work every time, and so did a harness that maximised the window
+through `WindowPattern.SetWindowVisualState`. So while the window is parked, hold it normal, publish
+the state it would have taken on its automation `HelpText`, as rule 7 publishes placement (the port
+writes `restored=Maximized`), and have the harness assert that. Run a step that maximises the window
+only when someone is there to see it.
+
 **Resize without taking focus**: `SetWindowPos(..., SWP_NOMOVE | SWP_NOZORDER | SWP_NOACTIVATE)`.
 
 ---
