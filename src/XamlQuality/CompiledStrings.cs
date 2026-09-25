@@ -153,6 +153,39 @@ internal static class CompiledStrings
         return loaded;
     }
 
+    /// <summary>
+    /// Every method or constructor <paramref name="method"/> calls, with <c>call</c>, <c>callvirt</c>
+    /// or <c>newobj</c>, in the order its code does. Empty when the method has no IL body.
+    /// </summary>
+    /// <remarks>
+    /// A call whose target cannot be resolved, for instance because its assembly does not load, is
+    /// left out rather than guessed at.
+    /// </remarks>
+    internal static IReadOnlyList<MethodBase> CalledBy(MethodBase method)
+    {
+        if (BodyOf(method) is not { } il)
+        {
+            return [];
+        }
+
+        Type[]? typeArguments = method.DeclaringType is { IsGenericType: true } owner ? owner.GetGenericArguments() : null;
+        Type[]? methodArguments = method.IsGenericMethod ? method.GetGenericArguments() : null;
+
+        List<MethodBase> called = [];
+        foreach ((OpCode code, int operand) in Instructions(il))
+        {
+            if ((code == OpCodes.Call || code == OpCodes.Callvirt || code == OpCodes.Newobj)
+                && operand + 4 <= il.Length
+                && Resolve(() => method.Module.ResolveMethod(BitConverter.ToInt32(il, operand), typeArguments, methodArguments))
+                    is { } callee)
+            {
+                called.Add(callee);
+            }
+        }
+
+        return called;
+    }
+
     /// <summary>A method's IL, or <c>null</c> when it has none or it cannot be read.</summary>
     private static byte[]? BodyOf(MethodBase method)
     {

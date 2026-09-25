@@ -201,15 +201,27 @@ public sealed class TemplatePartRule : IXamlRule
     /// 162 literals in compiled XAML, every one followed by one of those three.
     /// </para>
     /// <para>
+    /// ⭐ <b>A lookup belongs to the control whose template it is made on, whichever type's code
+    /// makes it.</b> A control can hand its template to a helper: in one real codebase two controls
+    /// each pass the arguments of their <c>OnApplyTemplate</c> to one controller, which makes every
+    /// lookup. Credited to the type whose code makes them, those lookups belonged to a type with no
+    /// theme, and reached a consumer only as the prose of a skip. So a lookup is credited to each
+    /// control that hands the method making it its template, or the template's name scope: from the
+    /// <c>OnApplyTemplate</c> the control resolves to, through any chain of calls in the scanned
+    /// assemblies that passes either on. A base class's lookups reach a subclass the same way, since the
+    /// base's <c>OnApplyTemplate</c> runs on the subclass's template. A method no control hands its
+    /// template to keeps its lookups as its own type's, as a handler on another control's template does.
+    /// </para>
+    /// <para>
     /// ⚠ <b>Lambdas, local functions and iterators compile into nested types</b>, so their literals
     /// are credited to the outermost type that declares them, the one a <c>ControlTheme</c> targets.
     /// </para>
     /// <para>
     /// ⚠ <b>Three limits.</b> A name built at runtime (<c>"PART_" + name</c>) is invisible, and so is
     /// a lookup through a helper whose name does not start with <c>Find</c> or <c>Get</c>; a control
-    /// left with no parts that way is named in <see cref="XamlRuleResult.Skipped"/>. And every lookup
-    /// is taken to be on the type's OWN template, so one that reaches into a child control's template
-    /// is checked against this type's theme, and reported there.
+    /// left with no parts that way is named in <see cref="XamlRuleResult.Skipped"/>. And a lookup no
+    /// control hands its template to is taken to be on its own type's template, so one that reaches
+    /// into a child control's template is checked against this type's theme, and reported there.
     /// </para>
     /// </remarks>
     private static Reading ReadControls(IReadOnlyList<Assembly> assemblies)
@@ -219,6 +231,10 @@ public sealed class TemplatePartRule : IXamlRule
             new HashSet<string>(StringComparer.Ordinal),
             new Dictionary<string, string>(StringComparer.Ordinal),
             new Dictionary<string, (string Source, string Cause)>(StringComparer.Ordinal));
+
+        HashSet<Assembly> scanned = [.. assemblies];
+        Dictionary<(Module Module, int Token), (string Owner, List<string> Parts)> lookups = [];
+        List<Type> topLevel = [];
 
         foreach (Assembly assembly in assemblies)
         {
@@ -239,17 +255,20 @@ public sealed class TemplatePartRule : IXamlRule
                 }
 
                 reading.Known.Add(owner.Name);
-
-                List<string> names = PartNamesIn(type, out string? unread);
-                foreach (string name in names)
+                if (owner == type)
                 {
-                    if (!reading.Declared.TryGetValue(owner.Name, out SortedSet<string>? parts))
-                    {
-                        parts = new SortedSet<string>(StringComparer.Ordinal);
-                        reading.Declared[owner.Name] = parts;
-                    }
+                    topLevel.Add(type);
+                }
 
-                    parts.Add(name);
+                (List<string> constants, List<(MethodBase Method, List<string> Parts)> made) = PartNamesIn(type, out string? unread);
+                foreach (string constant in constants)
+                {
+                    Declare(reading, owner.Name, constant);
+                }
+
+                foreach ((MethodBase method, List<string> parts) in made)
+                {
+                    lookups[KeyOf(method)] = (owner.Name, parts);
                 }
 
                 if (unread is not null)
@@ -259,12 +278,41 @@ public sealed class TemplatePartRule : IXamlRule
             }
         }
 
+        // Which controls hand each method their template.
+        Dictionary<(Module Module, int Token), SortedSet<string>> handedBy = [];
+        foreach (Type control in topLevel)
+        {
+            foreach ((Module Module, int Token) reached in HandedTemplate(control, scanned))
+            {
+                if (!handedBy.TryGetValue(reached, out SortedSet<string>? hosts))
+                {
+                    hosts = new SortedSet<string>(StringComparer.Ordinal);
+                    handedBy[reached] = hosts;
+                }
+
+                hosts.Add(control.Name);
+            }
+        }
+
+        foreach (((Module Module, int Token) method, (string owner, List<string> parts)) in lookups)
+        {
+            IEnumerable<string> creditedTo = handedBy.TryGetValue(method, out SortedSet<string>? hosts) ? hosts : [owner];
+            foreach (string host in creditedTo)
+            {
+                foreach (string part in parts)
+                {
+                    Declare(reading, host, part);
+                }
+            }
+        }
+
         return reading;
     }
 
     /// <summary>
-    /// The part names <paramref name="type"/> declares in its own members, with what stopped the
-    /// rest being read in <paramref name="unread"/>, or <c>null</c> when nothing did.
+    /// The part names <paramref name="type"/> declares in its own members: its <c>PART_</c>
+    /// constants, and the lookups each of its methods makes, with what stopped the rest being read in
+    /// <paramref name="unread"/>, or <c>null</c> when nothing did.
     /// </summary>
     /// <remarks>
     /// ⛔ <b>Each field and each method is read on its own</b>, so one that needs an assembly the
@@ -272,12 +320,13 @@ public sealed class TemplatePartRule : IXamlRule
     /// and one naming a framework type the scan's process does not have threw out of
     /// <see cref="Analyze"/>: <c>FileNotFoundException</c>, measured on a library's Release output.
     /// </remarks>
-    private static List<string> PartNamesIn(Type type, out string? unread)
+    private static (List<string> Constants, List<(MethodBase Method, List<string> Parts)> Lookups) PartNamesIn(Type type, out string? unread)
     {
         const BindingFlags Everything = BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Static
                                         | BindingFlags.Instance | BindingFlags.DeclaredOnly;
 
-        List<string> names = [];
+        List<string> constants = [];
+        List<(MethodBase Method, List<string> Parts)> lookups = [];
         List<Exception> failures = [];
 
         foreach (FieldInfo field in Read(() => type.GetFields(Everything), failures) ?? [])
@@ -286,24 +335,141 @@ public sealed class TemplatePartRule : IXamlRule
                     is { } constant
                 && IsPartName(constant))
             {
-                names.Add(constant);
+                constants.Add(constant);
             }
         }
 
         MethodBase[] methods = Read(() => (MethodBase[])[.. type.GetMethods(Everything), .. type.GetConstructors(Everything)], failures) ?? [];
         foreach (MethodBase method in methods)
         {
-            names.AddRange(Read(
+            List<string> parts = Read(
                 () => CompiledStrings.LoadedBy(method, IsPartName)
                     .Where(loaded => IsLookup(loaded.NextCall))
                     .Select(loaded => loaded.Value)
                     .ToList(),
-                failures) ?? []);
+                failures) ?? [];
+            if (parts.Count > 0)
+            {
+                lookups.Add((method, parts));
+            }
         }
 
         unread = failures.Count == 0 ? null : LoadedTypes.CauseOf(failures);
-        return names;
+        return (constants, lookups);
     }
+
+    /// <summary>
+    /// Every method a control's template reaches: the <c>OnApplyTemplate</c> the control resolves to,
+    /// when the scanned assemblies declare it, and each method in them that the template, or the
+    /// template's name scope, is handed to, however many calls deep.
+    /// </summary>
+    /// <remarks>
+    /// ⚠ <b>Handing the template on is a call to a method with a parameter that can take what
+    /// <c>OnApplyTemplate</c> was given</b>, or a value its type declares as a property, such as a
+    /// name scope. A parameter of type <see cref="object"/> takes anything, so it is not counted. Read
+    /// by name and signature, so no framework type is referenced: a framework whose
+    /// <c>OnApplyTemplate</c> takes nothing hands nothing on, and its controls read as they always did.
+    /// </remarks>
+    private static IReadOnlyCollection<(Module Module, int Token)> HandedTemplate(Type control, HashSet<Assembly> scanned)
+    {
+        MethodInfo? start;
+        Type[] handed;
+        try
+        {
+            start = ResolvedOnApplyTemplate(control);
+            if (start is null || !scanned.Contains(start.Module.Assembly))
+            {
+                return [];
+            }
+
+            handed = HandedTypes(start);
+        }
+        catch (Exception ex) when (ElementTypes.IsUnreadable(ex))
+        {
+            return [];
+        }
+
+        HashSet<(Module Module, int Token)> reached = [KeyOf(start)];
+        Queue<MethodBase> pending = new([start]);
+        while (pending.TryDequeue(out MethodBase? method))
+        {
+            foreach (MethodBase callee in CompiledStrings.CalledBy(method))
+            {
+                bool handedOn;
+                try
+                {
+                    handedOn = scanned.Contains(callee.Module.Assembly) && Takes(callee, handed);
+                }
+                catch (Exception ex) when (ElementTypes.IsUnreadable(ex))
+                {
+                    handedOn = false;
+                }
+
+                if (handedOn && reached.Add(KeyOf(callee)))
+                {
+                    pending.Enqueue(callee);
+                }
+            }
+        }
+
+        return reached;
+    }
+
+    /// <summary>
+    /// The <c>OnApplyTemplate</c> a control's template is applied through: the most-derived one in its
+    /// chain that takes one argument, or <c>null</c> when none does.
+    /// </summary>
+    private static MethodInfo? ResolvedOnApplyTemplate(Type control)
+    {
+        const BindingFlags Declared = BindingFlags.Instance | BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.DeclaredOnly;
+
+        for (Type? link = control; link is not null; link = link.BaseType)
+        {
+            if (link.GetMethods(Declared).FirstOrDefault(method => method.Name == "OnApplyTemplate" && method.GetParameters().Length == 1)
+                is { } declared)
+            {
+                return declared;
+            }
+        }
+
+        return null;
+    }
+
+    /// <summary>
+    /// What <paramref name="onApplyTemplate"/> is given, and the types of the properties that type
+    /// declares, such as its name scope; never <see cref="object"/>, <see cref="string"/> or a primitive.
+    /// </summary>
+    private static Type[] HandedTypes(MethodInfo onApplyTemplate)
+    {
+        Type argument = onApplyTemplate.GetParameters()[0].ParameterType;
+        return
+        [
+            argument,
+            .. argument.GetProperties(BindingFlags.Instance | BindingFlags.Public | BindingFlags.DeclaredOnly)
+                .Select(property => property.PropertyType)
+                .Where(type => type != typeof(object) && type != typeof(string) && !type.IsPrimitive && !type.IsEnum),
+        ];
+    }
+
+    /// <summary>Whether a parameter of <paramref name="callee"/> can take one of <paramref name="handed"/>.</summary>
+    private static bool Takes(MethodBase callee, Type[] handed) =>
+        callee.GetParameters().Any(parameter =>
+            parameter.ParameterType != typeof(object) && handed.Any(type => parameter.ParameterType.IsAssignableFrom(type)));
+
+    /// <summary>Records that <paramref name="control"/> declares <paramref name="part"/>.</summary>
+    private static void Declare(Reading reading, string control, string part)
+    {
+        if (!reading.Declared.TryGetValue(control, out SortedSet<string>? parts))
+        {
+            parts = new SortedSet<string>(StringComparer.Ordinal);
+            reading.Declared[control] = parts;
+        }
+
+        parts.Add(part);
+    }
+
+    /// <summary>A method's identity across the reads that find it: its module and metadata token.</summary>
+    private static (Module Module, int Token) KeyOf(MethodBase method) => (method.Module, method.MetadataToken);
 
     /// <summary>
     /// The outermost type declaring <paramref name="type"/>, which is the one a <c>ControlTheme</c>
