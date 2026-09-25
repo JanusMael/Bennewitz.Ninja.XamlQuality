@@ -14,7 +14,7 @@
 # Dot-sourcing it, as an editor's F5 does, runs it too; set UITESTPROBE_NOEXEC to load it without
 # running it. It leaves the caller's variables and the thread's DPI awareness as it found them.
 #
-# Written for TailBlazer's Avalonia port, and moved here on 2026-09-24 under this repository's
+# Written for a WPF-to-Avalonia port, and moved here on 2026-09-24 under this repository's
 # MIT licence.
 [CmdletBinding()]
 param()

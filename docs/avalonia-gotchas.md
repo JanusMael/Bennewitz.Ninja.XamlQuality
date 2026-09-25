@@ -26,11 +26,6 @@ and leave a line here pointing at the rule id.
 markup as XML and work against WPF and MAUI just as well — see the [README](../README.md). Keeping
 framework-specific notes beside framework-neutral code is a deliberate split, not an oversight.
 
-ⓘ Originated in [ClaudeForge](https://github.com/JanusMael/ClaudeForge) and moved here once it
-outgrew one application. Two companions stayed behind, being specific to that app's shipping setup:
-[TRIMMING.md](https://github.com/JanusMael/ClaudeForge/blob/main/TRIMMING.md) and
-[LINUX-DESKTOP-INTEGRATION.md](https://github.com/JanusMael/ClaudeForge/blob/main/docs/LINUX-DESKTOP-INTEGRATION.md).
-
 ---
 
 ## XAML / layout
@@ -128,13 +123,13 @@ Do **not** reach for `ClipToBounds="True"` across the tree. It costs a clip push
 
 > **⚠ The trap underneath this one, and it is the expensive part.** `Visual.Bounds` and an automation peer's bounding rectangle are **not the same object**, and it is very easy to assert on one while reasoning about the other. This entry exists because a port measured a 50px overlap through UI Automation, reasoned about it as layout, and concluded the pane was painting over its neighbours. It was not — a `UserControl` was clipping it. The defaults table above is what to expect; *which object you interrogate* is what actually decides the answer.
 
-<sub>Measured on Avalonia 12.1.2, .NET 10, in the TailBlazer WPF→Avalonia port (`LayoutClipFixture`, 10 tests). The `ClipToBounds` defaults, the centring and the automation bounds are captures and peer reads under the **headless** platform — Avalonia's own peers, not the Windows UIA provider; the original field measurement came through real UIA and agreed. The WPF half is stated from `ArrangeCore`'s documented behaviour and is **not** measured here.</sub>
+<sub>Measured on Avalonia 12.1.2, .NET 10, in a WPF→Avalonia port (`LayoutClipFixture`, 10 tests). The `ClipToBounds` defaults, the centring and the automation bounds are captures and peer reads under the **headless** platform — Avalonia's own peers, not the Windows UIA provider; the original field measurement came through real UIA and agreed. The WPF half is stated from `ArrangeCore`'s documented behaviour and is **not** measured here.</sub>
 
 ---
 
 ## Styling / theming
 
-> Colour-token policy (why we don't use the `SystemControl*` family under Semi.Avalonia) lives in [UI-STYLE-GUIDE.md](https://github.com/JanusMael/ClaudeForge/blob/main/docs/UI-STYLE-GUIDE.md) §2. The two entries below are the *mechanical* traps that make a correct-looking style silently do nothing.
+> The two entries below are the *mechanical* traps that make a correct-looking style silently do nothing.
 
 ### A local value OUTRANKS every Style setter — a styled property must not also be set as an attribute
 
@@ -240,7 +235,7 @@ Both traps can be present at once and mask each other — fixing only the scopin
 
 **Fix:** a guard that does what the app does. **Lay out text** in every bundled family by the URI consumers are told to use, and assert the family the text was shaped with. `AssetLoader.Exists` is weaker: it proves the file is there, not that the name after the `#` matches the font inside it. The headless platform's default drawing (`UseHeadlessDrawing = true`) is enough — every case above behaved identically under it and under Skia, except for which font a fallback list lands on.
 
-<sub>Measured on Avalonia 12.1.0, Windows, on the headless platform under both Skia and headless drawing, using `ScopedEditors.AvaloniaUI`'s bundled JetBrains Mono NL and the pre-rename assembly name `ScopedEditors.Avalonia`. The fallback list shaped with `Consolas` under Skia, and with the stub's `BareMinimum` under headless drawing.</sub>
+<sub>Measured on Avalonia 12.1.0, Windows, on the headless platform under both Skia and headless drawing, using a library's bundled JetBrains Mono NL and that library's pre-rename assembly name. The fallback list shaped with `Consolas` under Skia, and with the stub's `BareMinimum` under headless drawing.</sub>
 
 ---
 
@@ -342,7 +337,7 @@ Avalonia takes a generated container's automation name from the bound **item**. 
 
 **Fix:** override `ToString()` on the item type, returning an explicit automation name and falling back to the visible header. `ItemsSourceBoundTabsTests` resolves each such TabControl's `ItemTemplate` `x:DataType`, finds the file declaring it, and fails without the override.
 
-> The "name comes from the item" rule applies to any `ItemsSource`-generated container — but ⛔ **the FALLBACK does not, and neither does the fix.** ClaudeForge's nav `TreeViewItem`s were audited afterwards and were broken too; see the next entry. Do not assume `ToString()` is the answer for a container that is not a `TabItem`.
+> The "name comes from the item" rule applies to any `ItemsSource`-generated container — but ⛔ **the FALLBACK does not, and neither does the fix.** An application's nav `TreeViewItem`s were audited afterwards and were broken too; see the next entry. Do not assume `ToString()` is the answer for a container that is not a `TabItem`.
 
 ---
 
@@ -364,16 +359,16 @@ Same underlying rule as the `TabControl` entry above — the container's name do
 
 ⛔⛔ **A `ToString()` override does NOT fix a `TreeViewItem`.** Measured: a probe override returning `"PROBE-" + Title` on `NavigationNodeViewModel` never reached UIA — all 26 rows stayed empty. The empty name is itself the tell, because `ToString()` can never *return* empty.
 
-⛔⛔ **A lone bound `TextBlock` as the template root does NOT supply the name either.** Both of the repo's `ItemsSource`-bound navigation trees were broken, measured via a UIA `ControlViewWalker` census on both running apps:
+⛔⛔ **A lone bound `TextBlock` as the template root does NOT supply the name either.** Both `ItemsSource`-bound navigation trees in two applications were broken, measured via a UIA `ControlViewWalker` census on both running apps:
 
 | View | Template root | Rows before | Rows after |
 |---|---|---|---|
-| `ClaudeForge/Views/MainWindow.axaml` | `Panel` (divider `Border` + icon/title `StackPanel`) | 26 × `[]` | 24 × `[Essentials]`, `[Claude Code]`, `[General]`, … |
-| `OpenCodeForge/Views/MainWindow.axaml` | a single `<TextBlock Text="{Binding Title}" />` | 3 × `[]` | `[OpenCode]`, `[OpenCode TUI]`, `[Artifacts]` |
+| the first app's `Views/MainWindow.axaml` | `Panel` (divider `Border` + icon/title `StackPanel`) | 26 × `[]` | 24 × `[Essentials]`, `[Claude Code]`, `[General]`, … |
+| the second app's `Views/MainWindow.axaml` | a single `<TextBlock Text="{Binding Title}" />` | 3 × `[]` | `[OpenCode]`, `[OpenCode TUI]`, `[Artifacts]` |
 
 Each tree's own `Tree` element was already named `Settings navigation` in both apps, which is part of why this survived so long — the container is named, so a spot check looks healthy.
 
-⚠⚠ **Beware the harness recipe that hid this.** The UIA navigation recipe in this repo's notes locates a page by finding the `Text` **leaf** whose name is the page title and walking **up** to its `TreeItem` ancestor. That works, and it made OpenCodeForge's tree look correctly labelled when only the inner `TextBlock` ever was. A first draft of the guard below trusted that and passed any lone-text template — an escape hatch that would have vouched for a tree announcing nothing. **Read the container's own `Name`, not a descendant's.**
+⚠⚠ **Beware the harness recipe that hid this.** The UIA navigation recipe in the applications' notes locates a page by finding the `Text` **leaf** whose name is the page title and walking **up** to its `TreeItem` ancestor. That works, and it made the second app's tree look correctly labelled when only the inner `TextBlock` ever was. A first draft of the guard below trusted that and passed any lone-text template — an escape hatch that would have vouched for a tree announcing nothing. **Read the container's own `Name`, not a descendant's.**
 
 **Fix** — a style setter on the generated container:
 
@@ -395,14 +390,14 @@ Each tree's own `Tree` element was already named `Settings navigation` in both a
 
 **Symptom:** A screen reader reads `Bennewitz.Ninja.<…>.SomeViewModel` for each row of a list, once per row, while the rows render perfectly on screen.
 
-Third container type, same rule, and **four of the repo's four `ItemsSource`-bound ListBoxes had it** — the pattern's hit rate is now 8 for 8 across `TabControl`, `TreeView` and `ListBox`. Found by running OpenCodeForge and reading the search results after building an unrelated feature on that surface:
+Third container type, same rule, and **all four `ItemsSource`-bound ListBoxes across the same two applications had it** — the pattern's hit rate is now 8 for 8 across `TabControl`, `TreeView` and `ListBox`. Found by running one of them and reading the search results after building an unrelated feature on that surface:
 
 | View | Item type | Rows before | Rows after |
 |---|---|---|---|
-| `OpenCodeForge/Views/MainWindow.axaml` (search results) | `SearchResultViewModel` | 5 × `[…Search.SearchResultViewModel]` | `[share, OpenCode › Sharing. Critical: On auto, every session is uploaded to a shareable link.]` |
-| `ClaudeForge/Views/HooksEditorView.axaml` | `HookEventGroup` | type name | `[PreToolUse, 2 hooks]` |
-| `ClaudeForge/Views/McpServersEditorView.axaml` | `McpServerEntry` | type name | `[my-server, stdio]` |
-| `OpenCode.Avalonia/Keybinds/OpenCodeKeybindEditorView.axaml` | `OpenCodeKeybindActionViewModel` | type name | `[Share current session, <leader>s]` |
+| `Views/MainWindow.axaml` (search results) | `SearchResultViewModel` | 5 × `[…Search.SearchResultViewModel]` | `[share, OpenCode › Sharing. Critical: On auto, every session is uploaded to a shareable link.]` |
+| `Views/HooksEditorView.axaml` | `HookEventGroup` | type name | `[PreToolUse, 2 hooks]` |
+| `Views/McpServersEditorView.axaml` | `McpServerEntry` | type name | `[my-server, stdio]` |
+| `Keybinds/OpenCodeKeybindEditorView.axaml` | `OpenCodeKeybindActionViewModel` | type name | `[Share current session, <leader>s]` |
 
 ⚠ **Only the first row of that table was measured before and after.** The other three are the same container type generated the same way and were fixed by the same mechanism; the guard proves the override is present, but they have not individually been seen on screen.
 
@@ -410,7 +405,7 @@ Third container type, same rule, and **four of the repo's four `ItemsSource`-bou
 
 ⭐ **Put in the announcement whatever the row conveys visually and only visually.** Each fix above carries a count, a transport, a key summary, or a severity, because those are rendered beside the label and a reader gets none of them otherwise. A row whose dot says "Critical" is the clearest case: the dot's own `HelpText` is on an inner `TextBlock`, and a reader announcing the **container** does not necessarily read a child's help text.
 
-⚠ **An `ItemsControl` is not in this class and is deliberately not scanned.** It generates non-focusable `ContentPresenter`s, so the announced name comes from the focusable control inside the template. ClaudeForge's search popup is an `ItemsControl` of `Button`s carrying an explicit `AutomationProperties.Name`, which is why the *same view-model* was broken in one app and correct in the other — a per-app difference no view-model test can see.
+⚠ **An `ItemsControl` is not in this class and is deliberately not scanned.** It generates non-focusable `ContentPresenter`s, so the announced name comes from the focusable control inside the template. One app's search popup is an `ItemsControl` of `Button`s carrying an explicit `AutomationProperties.Name`, which is why the *same view-model* was broken in one app and correct in the other — a per-app difference no view-model test can see.
 
 ---
 
@@ -420,7 +415,7 @@ Third container type, same rule, and **four of the repo's four `ItemsSource`-bou
 
 Avalonia's `TextBlock` peer reports the control's own `Text` as its automation name. An explicit `AutomationProperties.Name` does not override it. Measured through UIA on the running app: a severity dot bound to a full sentence announced `▲`, and a banner bound to `"Critical: …"` announced its visible sentence instead.
 
-⛔ **This makes a whole class of markup a silent no-op.** This repo has **15** `AutomationProperties.Name="{Binding DisplayName}"` attributes on `TextBlock`s; every one is dead. Nobody noticed because in each case the `Text` *already* equals `DisplayName`, so the announced result was accidentally correct.
+⛔ **This makes a whole class of markup a silent no-op.** One application had **15** `AutomationProperties.Name="{Binding DisplayName}"` attributes on `TextBlock`s; every one is dead. Nobody noticed because in each case the `Text` *already* equals `DisplayName`, so the announced result was accidentally correct.
 
 ⚠ **Wrapping the `TextBlock` to carry the name makes it worse, two ways** — both measured:
 
@@ -442,7 +437,7 @@ Combined with `AutomationProperties.AccessibilityView="Raw"` on the inner glyph,
 
 **Symptom:** A UIA sweep that queries the obvious control types — `Edit`, `ComboBox`, `CheckBox` — finds the free-form pickers **missing** and reports several unnamed `Edit` elements instead. It reads exactly like `AutomationProperties.Name` having been ignored.
 
-**It has not been.** Measured on OpenCodeForge's Essentials page, where three `AutoCompleteBox`es and three `NumericUpDown`s each carry `AutomationProperties.Name="{Binding Title}"`:
+**It has not been.** Measured on an application's Essentials page, where three `AutoCompleteBox`es and three `NumericUpDown`s each carry `AutomationProperties.Name="{Binding Title}"`:
 
 | Control in markup | What UIA actually exposes |
 |---|---|
@@ -462,11 +457,11 @@ So the name arrives — but it arrives on the composite's own peer, and the inne
 
 ⚠ **Scope such a selector to the control whose `TemplatedParent` OWNS the part, which is not always the one it renders inside.** `PART_TextBox` draws within the `ButtonSpinner` but belongs to the `NumericUpDown`'s template, so a `ButtonSpinner /template/` selector — the natural guess from the UIA tree — matches nothing. UIA shows nesting; it never shows template ownership. Read `TemplatedParent` from a headless dump instead of reasoning about it; the guard asserts it so the selector and the test cannot drift apart.
 
-A host the view left unnamed copies down an empty string and stays unnamed — deliberately, so this cannot paper over a genuinely missing name. One `AutoCompleteBox` on ClaudeForge's Model & Effort page is in exactly that state, and the app-wide count of blank-named focusable `PART_TextBox` instances went 15 → 1 rather than to zero for that reason. The container and the focused field now carry the same name, so a screen reader may say it twice; that verbosity is the right side of the trade against a focused field with no name at all.
+A host the view left unnamed copies down an empty string and stays unnamed — deliberately, so this cannot paper over a genuinely missing name. One `AutoCompleteBox` on an application's Model & Effort page is in exactly that state, and the app-wide count of blank-named focusable `PART_TextBox` instances went 15 → 1 rather than to zero for that reason. The container and the focused field now carry the same name, so a screen reader may say it twice; that verbosity is the right side of the trade against a focused field with no name at all.
 
 ⛔ **The trap is the probe, not the app.** Enumerate by `TrueCondition` and read `Current.ControlType.ProgrammaticName`, or filter to `Current.IsKeyboardFocusable` — the focus targets are what a screen reader actually lands on. ⛔ They did **not** line up with the markup one-for-one, which an earlier revision of this entry claimed: the composite reports itself focusable yet never holds focus, so the focusable set included both it and its unnamed inner `Edit`. `IsKeyboardFocusable` tells you what *can* take focus; only `HasKeyboardFocusProperty` tells you what *does*. `AutomationElement.FocusedElement` is no substitute — it is global, and from an agent session the app usually cannot be brought foreground, so it returns the desktop's `Pane class=#32769`. Querying a hand-picked list of control types produced a confident false conclusion here, and the count of unnamed `Edit`s (six) happened to look like a plausible defect: 3 + 3.
 
-⚠ **A `NumericUpDown`'s spin buttons announced `Avalonia.Controls.PathIcon`** — same `ToString()` fallback as the `ItemsSource` container cases above, because Avalonia's default template gives them no name and their content is a `PathIcon`. Twelve of them in ClaudeForge (Essentials, General, Sandbox, Backup / Restore) and six on OpenCodeForge's Essentials page. **Fixed 2026-09-08.**
+⚠ **A `NumericUpDown`'s spin buttons announced `Avalonia.Controls.PathIcon`** — same `ToString()` fallback as the `ItemsSource` container cases above, because Avalonia's default template gives them no name and their content is a `PathIcon`. Twelve of them in one application (Essentials, General, Sandbox, Backup / Restore) and six on another's Essentials page. **Fixed 2026-09-08.**
 
 This one cannot be fixed from a view, and no widening of the AXAML scan reaches it: the buttons exist only inside `ButtonSpinner`'s control template, so there is no element in any markup to annotate or to scan. They are named from the theme instead — `src/ScopedEditors.AvaloniaUI/Themes/AccessibilityNames.axaml` in [`Bennewitz.Ninja.ScopedEditors`](https://github.com/JanusMael/Bennewitz.Ninja.ScopedEditors), included by `SemiBundle.axaml`, which is the one line both apps' `App.axaml` already take from the shared library:
 
@@ -489,13 +484,13 @@ The `/template/` combinator is not optional — a selector without it does not r
 
 **Cause:** The peers are right; the array is lost on its way to the client. `SafeArrayRef.CreateFromObjects` sized the SAFEARRAY to the buffer it rented from `ArrayPool` rather than to the selection, so a one-item selection became a 16-slot array, and it filled a slot only when `ComWrappers.TryGetComInstance` succeeded, which it never does for Avalonia's plain managed peers. The client received an array of nulls. A `ComboBox` hides this, because it also exposes `ValuePattern` with the selected text; a `ListBox` has no such fallback. The same path carried `ITableProvider`'s row and column headers, `ITableItemProvider`, and `ITextProvider`'s selection and visible ranges, so those came back empty too. Fixed upstream in [AvaloniaUI/Avalonia#22151](https://github.com/AvaloniaUI/Avalonia/pull/22151), released in 12.1.3.
 
-⛔ **A headless fixture cannot catch it.** The headless platform never goes through the Win32 marshalling where the bug lived. Measured on the TailBlazer port: `headless=1, live=0` with the same peer. A green headless test says nothing about what a screen reader or a UIA-driven test sees on Windows.
+⛔ **A headless fixture cannot catch it.** The headless platform never goes through the Win32 marshalling where the bug lived. Measured on a WPF-to-Avalonia port: `headless=1, live=0` with the same peer. A green headless test says nothing about what a screen reader or a UIA-driven test sees on Windows.
 
 **Fix:** Avalonia 12.1.3 or later. From `2026.3.924`, `Bennewitz.Ninja.AppServices.Avalonia` and `Bennewitz.Ninja.ScopedEditors.Avalonia` require it, so a host that references Avalonia directly at an earlier version fails restore with `NU1605` until it raises that reference.
 
 ### A `ListBox` advertises `ScrollPattern`, but its scroll provider never resolves — unfixed as of 12.1.3
 
-**Symptom:** A UIA client scrolls a list through the list, and nothing happens. The `ListBox` advertises `ScrollPattern`, yet answers `VerticallyScrollable=False`, `VerticalScrollPercent=-1` and `VerticalViewSize=0`, and `Scroll()` and `SetScrollPercent()` do nothing. Measured on the TailBlazer port, headless and live on Windows. The list's own `ScrollViewer` peer answers correctly: `True`, `0`, and the real view size.
+**Symptom:** A UIA client scrolls a list through the list, and nothing happens. The `ListBox` advertises `ScrollPattern`, yet answers `VerticallyScrollable=False`, `VerticalScrollPercent=-1` and `VerticalViewSize=0`, and `Scroll()` and `SetScrollPercent()` do nothing. Measured headless and live on Windows. The list's own `ScrollViewer` peer answers correctly: `True`, `0`, and the real view size.
 
 **Cause:** In `ItemsControlAutomationPeer`, every `IScrollProvider` member reads a private `_scroller` field, and the only assignment to it is inside the `protected virtual Scroller` getter, which nothing in `ItemsControlAutomationPeer`, `SelectingItemsControlAutomationPeer` or `ListBoxAutomationPeer` calls. The field stays null, so every member falls back to its default. The same getter holds a second defect: it marks the search done even when `ListBox.Scroll` is still null, so a peer created before its template is applied would stay inert even if the getter were called. Read in Avalonia's source at tag 12.1.3. Reported upstream as [AvaloniaUI/Avalonia#22038](https://github.com/AvaloniaUI/Avalonia/issues/22038), which its author closed without a fix.
 
@@ -542,7 +537,7 @@ A binding on a control that is not an items control is not checked at all. A `Bo
 
 **Fix:** Read what a click selected in a bubble handler added with `handledEventsToo: true`, where the selection has settled. Never arm state on the press and wait for `SelectionChanged` to complete it: a click that changes nothing sends none.
 
-Measured on Avalonia 12.1.3, headless with Skia and the Fluent theme: a `ListBox` of eight strings in `SelectionMode="Multiple"`, with pointer input raised through `HeadlessWindowExtensions`. From TailBlazer's port, re-measured here.
+Measured on Avalonia 12.1.3, headless with Skia and the Fluent theme: a `ListBox` of eight strings in `SelectionMode="Multiple"`, with pointer input raised through `HeadlessWindowExtensions`.
 
 ### Shift-click ranges from the ANCHOR INDEX, and a selection made in code moves the anchor
 
@@ -550,7 +545,7 @@ Measured on Avalonia 12.1.3, headless with Skia and the Fluent theme: a `ListBox
 
 **Cause:** Shift-click ranges from `Selection.AnchorIndex`, an index, and replaces the selection rather than adding to it. From rows 2 and 4 selected, with the anchor at 4 from a Ctrl-click, Shift-clicking 6 selects 4, 5 and 6 and drops 2. Shift-clicking 1 then selects 1 to 4, and the anchor stays at 4. Adding to `SelectedItems` in code moves the anchor to the added index: with the anchor at 1, adding item 6 moved it to 6, and the next Shift-click on 3 selected 3 to 6.
 
-**Fix:** Where the item under a container can change, as in a virtualised list whose slots are re-pointed at new content as it scrolls, the anchor index names a different item after a scroll: keep your own anchor, by item identity. ⚠ In a test, a selection made in code before a Shift-click moves the anchor, so it can make the range come out right with the feature missing. It made one TailBlazer test pass that way.
+**Fix:** Where the item under a container can change, as in a virtualised list whose slots are re-pointed at new content as it scrolls, the anchor index names a different item after a scroll: keep your own anchor, by item identity. ⚠ In a test, a selection made in code before a Shift-click moves the anchor, so it can make the range come out right with the feature missing. It made one test pass that way.
 
 Measured the same way as the entry above.
 
@@ -671,7 +666,7 @@ private void NotifyFilteredListsChanged()
 
 Call it at the end of the refresh (both the success and the `catch` branch that clears the lists), and again when a lazy per-row fill completes — a filter typed before descriptions have loaded can't match them yet, so the fill has to re-announce.
 
-**Where:** `AgentsSkillsEditorViewModel.NotifyFilteredListsChanged` (with `FillDescriptionsThenNotifyAsync` for the async half); `SettingsGroupEditorViewModel` raises `FilteredEditors` by hand for the same reason. Regression test: `AgentsSkillsFilterTests.RefreshAsync_RaisesFilteredListNotifications`. Invariant: root [`AGENTS.md`](https://github.com/JanusMael/ClaudeForge/blob/main/AGENTS.md) §1.
+**Where:** `AgentsSkillsEditorViewModel.NotifyFilteredListsChanged` (with `FillDescriptionsThenNotifyAsync` for the async half); `SettingsGroupEditorViewModel` raises `FilteredEditors` by hand for the same reason. Regression test: `AgentsSkillsFilterTests.RefreshAsync_RaisesFilteredListNotifications`.
 
 **Related:** a two-argument format string cannot be applied with a single-binding `StringFormat` — `{Binding Count, StringFormat={x:Static loc:Strings.SomeFmt}}` fills `{0}` and leaves a literal `{1}` on screen. Format it in the view-model instead (`AgentsSkillsEditorViewModel.FilterSummary`).
 
@@ -759,7 +754,7 @@ Same caveat applies to any wrapper type that owns native resources via `IDisposa
 
 ## Trim safety
 
-The first two entries come from an application's trimmed Release publish; ClaudeForge's [TRIMMING.md](https://github.com/JanusMael/ClaudeForge/blob/main/TRIMMING.md) has the full set. The rest are from the other side. A LIBRARY has no publish of its own, so its trim hazards surface in a consumer's build unless it goes looking for them itself. The `trim` job in [`Bennewitz.Ninja.ScopedEditors`](https://github.com/JanusMael/Bennewitz.Ninja.ScopedEditors/tree/main/trimcheck) is the worked example.
+The first two entries come from an application's trimmed Release publish. The rest are from the other side. A LIBRARY has no publish of its own, so its trim hazards surface in a consumer's build unless it goes looking for them itself. The `trim` job in [`Bennewitz.Ninja.ScopedEditors`](https://github.com/JanusMael/Bennewitz.Ninja.ScopedEditors/tree/main/trimcheck) is the worked example.
 
 ### `JsonArray.Add<T>(T)` is `RequiresUnreferencedCode` — cast to `JsonNode?`
 
@@ -809,7 +804,7 @@ The canary was a `Styles` file with `x:CompileBindings="False"` and one `{Bindin
 
 **Symptom:** A trimmed publish of a test app that references the library reports no warnings, and the library still ships a trim hazard.
 
-**Cause:** ILLink analyses only what it keeps. An app that never calls into the library lets ILLink remove it, and removed code cannot warn. Measured on `ScopedEditors.AvaloniaUI`: with its `TrimmerRootAssembly` line deleted, the publish still exited 0, and the three warnings reachable only through that assembly vanished with it.
+**Cause:** ILLink analyses only what it keeps. An app that never calls into the library lets ILLink remove it, and removed code cannot warn. Measured on a library: with its `TrimmerRootAssembly` line deleted, the publish still exited 0, and the three warnings reachable only through that assembly vanished with it.
 
 **Fix:** Microsoft's recommended trimming test app — an executable that references every shipped project and roots each one by **assembly** name — then compare its warnings with a committed baseline:
 
@@ -818,7 +813,7 @@ The canary was a `Styles` file with `x:CompileBindings="False"` and one `{Bindin
 <TrimMode>full</TrimMode>
 <TrimmerSingleWarn>false</TrimmerSingleWarn>
 <!-- one per shipped project -->
-<TrimmerRootAssembly Include="ScopedEditors.AvaloniaUI" />
+<TrimmerRootAssembly Include="My.Library.AvaloniaUI" />
 ```
 
 Fail in **both** directions. A new warning is a hazard just added; a missing one means the baseline is stale or ILLink stopped analysing something. Keep at least one expected warning that is reachable only through the rooted code — here, DataGrid's, in the next entry — so a publish that analysed nothing cannot pass. That check is proven the same way: an empty log, an unrooted assembly, a reflection binding in AXAML and a suppressed `Type.GetType` each fail it, and the restored tree passes.
@@ -857,7 +852,7 @@ They are the price of referencing DataGrid, not a defect to hunt for in your cod
 
 **Cause:** Wayland protocol intentionally does not expose a per-window-icon API. Compositors read icons via `app_id` → `.desktop` file lookup in `$XDG_DATA_DIRS/applications/`.
 
-**Fix:** Ship a `.desktop` file template. See [LINUX-DESKTOP-INTEGRATION.md](https://github.com/JanusMael/ClaudeForge/blob/main/docs/LINUX-DESKTOP-INTEGRATION.md) for the per-user / packager install procedures. `Window.Icon` continues to work on X11 (writes `_NET_WM_ICON`).
+**Fix:** Ship a `.desktop` file template, installed per user or by the packager. `Window.Icon` continues to work on X11 (writes `_NET_WM_ICON`).
 
 ### Emoji glyphs require system emoji-font fallback on Linux
 
@@ -869,7 +864,7 @@ They are the price of referencing DataGrid, not a defect to hunt for in your cod
 
 ### `XDG_SESSION_TYPE` distinguishes Wayland from X11
 
-**Useful for diagnostics:** `Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")` returns `"wayland"` / `"x11"` / `"tty"` etc. on systemd-logind systems. ClaudeForge's `AppIcon.EnsureLoaded` logs this on Linux startup so bug reports self-identify the session type.
+**Useful for diagnostics:** `Environment.GetEnvironmentVariable("XDG_SESSION_TYPE")` returns `"wayland"` / `"x11"` / `"tty"` etc. on systemd-logind systems. Logging it on Linux startup makes bug reports self-identify the session type.
 
 ### Driving an Avalonia app with `xdotool`: a menu is its own X window, a tooltip never appears, and accelerators do not arrive
 

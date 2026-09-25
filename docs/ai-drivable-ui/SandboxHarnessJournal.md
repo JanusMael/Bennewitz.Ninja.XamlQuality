@@ -1,8 +1,8 @@
 # Running UI-automation harnesses in Windows Sandbox
 
 *An account of making Windows Sandbox a working environment for UI Automation tests, written while
-doing it in TailBlazer's port from 2026-09-05. "Here" means that port, on that machine, and the
-scripts and commits it names are TailBlazer's.*
+doing it in a WPF-to-Avalonia port from 2026-09-05. "Here" means that port, on that machine, and the
+scripts and commits it names are the port's.*
 
 ---
 
@@ -15,11 +15,11 @@ a sandbox is the wrong tool for that job.*
 
 ## The problem this solves
 
-TailBlazer has thirty-seven runtime harnesses: PowerShell scripts that start the real application
+The port has thirty-seven runtime harnesses: PowerShell scripts that start the real application
 and assert on what it actually does through UI Automation. They exist because the compiler and the
 unit suite are both blind to a whole class of defect in a desktop application - a dead binding, an
 unresolved resource, a command wired to nothing. A green unit suite is not evidence the feature
-works, and TailBlazer has the scars to prove it: one feature shipped with thirty-six passing tests
+works, and the port has the scars to prove it: one feature shipped with thirty-six passing tests
 and did not work at all.
 
 Nine of those harnesses sent **real keystrokes and mouse input** when this was written; one has
@@ -56,7 +56,7 @@ missing and there is no compiler in there to do it.
 Every harness finds the application the same way:
 
 ```powershell
-Join-Path (Split-Path -Parent $PSScriptRoot) "Source\TailBlazer\bin\Debug\net10.0-windows\TailBlazer.exe"
+Join-Path (Split-Path -Parent $PSScriptRoot) "Source\App\bin\Debug\net10.0-windows\App.exe"
 ```
 
 The obvious approach is to give every script an `-Exe` parameter. Thirty-three edits, and every
@@ -67,7 +67,7 @@ The better approach is to **give the sandbox the shape the scripts already expec
 | Host folder | Sandbox path | |
 |---|---|---|
 | the host's PowerShell 7 install | `C:\pwsh` | read-only |
-| the self-contained publish | `C:\repo\Source\TailBlazer\bin\Debug\net10.0-windows` | read-only |
+| the self-contained publish | `C:\repo\Source\App\bin\Debug\net10.0-windows` | read-only |
 | the repository's `Harnesses` folder | `C:\repo\Harnesses` | read-write |
 
 `$PSScriptRoot` is then `C:\repo\Harnesses`, its parent is `C:\repo`, and the path each script
@@ -144,7 +144,7 @@ the right shape is **one session for the whole suite** rather than one sandbox p
 ## What it is not for
 
 **Performance measurement.** A virtual machine says nothing about processor time or GPU behaviour
-on the real machine. TailBlazer has locked decisions resting on host measurements, so the runner
+on the real machine. The port has locked decisions resting on host measurements, so the runner
 refuses its performance harness *by name*, out loud, rather than skipping it quietly.
 
 ## Dogfooding
@@ -448,7 +448,7 @@ together as "they need input".
 **`verify-clear-shortcut.ps1` is the sharpest case, and it is the one most likely to be converted by
 mistake.** Invoking the Clear command through `InvokePattern` would be easy and would pass, and it
 would prove nothing the unit suite does not already prove. The harness exists because *a `KeyBinding`
-whose command does not resolve fails silently* - TailBlazer's most repeated lesson - so the key
+whose command does not resolve fails silently* - the port's most repeated lesson - so the key
 binding is the entire subject. Its discriminating half is that a **bare L does nothing**, which no
 pattern can express at all.
 
@@ -643,7 +643,7 @@ throughout.
 
 **A forty harness session at the default 8 GB hung the host machine, which had to be rebooted.**
 The run reached the fourth harness — `look-wordwrap.ps1`, a WPF one — and stopped. Nothing was left
-behind: no `WindowsSandboxRemoteSession`, no `WindowsSandboxServer`, no orphaned `TailBlazer`, and
+behind: no `WindowsSandboxRemoteSession`, no `WindowsSandboxServer`, no orphaned application process, and
 the working tree was intact afterwards.
 
 **This is the second time and the rule was already here.** *Replicated: a sandbox delivers held
@@ -721,7 +721,7 @@ and the fourth still `pending`. That is the difference between "half an hour bou
 `run-20260916-092856/verify-avalonia-shell.txt` contains **one line**:
 
 ```
-driving the AVALONIA build at C:\repo\Source\TailBlazer.Avalonia\bin\Debug\net10.0\TailBlazer.Avalonia.exe
+driving the AVALONIA build at C:\repo\Source\App.Avalonia\bin\Debug\net10.0\App.Avalonia.exe
 ```
 
 `run.log` ends at `09:29:38  running verify-avalonia-shell.ps1`. The host was gone by 09:30, and the
@@ -938,7 +938,7 @@ were all watching. Worse, this script published `tools/Input` and `tools/Probe` 
 **inside that folder** before the sandbox started, so a run churned 283 MB in the working tree on its
 way in.
 
-Now: a copy is staged to `%TEMP%\TailBlazerSandbox\harnesses`, everything is published into `%TEMP%`,
+Now: a copy is staged to `%TEMP%\HarnessSandbox\harnesses`, everything is published into `%TEMP%`,
 the guest is given the copy, and the run's results are copied back **after the sandbox has gone**.
 Measured: **0.6 MB staged** against a 360 MB folder, and the repository's own `tools/*/bin` mtimes
 unchanged across two runs.
@@ -977,7 +977,7 @@ true and it caught the owner out on the first staged run.
 
 `C:\repo` in the guest is **whatever host folder is mapped there**, which is the whole trick from
 *The trick that avoided editing thirty-three scripts*. Since staging it is
-`%TEMP%\TailBlazerSandbox\harnesses`, never the working tree. What is excluded is the **copy** of
+`%TEMP%\HarnessSandbox\harnesses`, never the working tree. What is excluded is the **copy** of
 `tmp/`; the guest then creates its own inside the staged tree, which is exactly what it should do.
 
 Checked by timestamp rather than argued about:
@@ -1082,7 +1082,7 @@ owner spotted it on trials 5 and 6 and both were the old behaviour — 2 for 2, 
 
 ### THE SYMPTOM THAT IS INVISIBLE TO THE HARNESS AND TO THE EVENT LOG
 
-**The host-side trouble of 2026-09-16 left no trace anywhere TailBlazer was looking.** The harness
+**The host-side trouble of 2026-09-16 left no trace anywhere the port was looking.** The harness
 passed. The summary said PASS. The Windows System log had no bugcheck, no TDR, and recorded a clean
 shutdown. **The evidence was in the desktop application's own log**, and it is worth knowing that is
 a place to look.

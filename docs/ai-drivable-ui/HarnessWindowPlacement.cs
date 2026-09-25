@@ -1,13 +1,13 @@
-// A worked example for docs/ai-drivable-ui.md, section 5: TailBlazer's helper that keeps harness
-// windows out of the person's way. It is not compiled here: it needs Avalonia 12 and runs inside the
-// application whose windows it places. Written for TailBlazer's Avalonia port, and moved here on
-// 2026-09-24 under this repository's MIT licence, with its code exactly as it ran there.
+// A worked example for docs/ai-drivable-ui.md, section 5: a WPF-to-Avalonia port's helper that keeps
+// harness windows out of the person's way. It is not compiled here: it needs Avalonia 12 and runs
+// inside the application whose windows it places. Moved here on 2026-09-24 under this repository's
+// MIT licence, with its code as it ran there but for the application's names, made neutral.
 
 using System.Runtime.InteropServices;
 using Avalonia;
 using Avalonia.Controls;
 
-namespace TailBlazer.Avalonia.Infrastructure;
+namespace App.Avalonia.Infrastructure;
 
 /// <summary>Which edge a harness window is parked against.</summary>
 internal enum ParkSide
@@ -95,7 +95,7 @@ internal enum ParkSide
 /// <para>
 /// <b>Product code changed for a harness, gated on a variable never set in normal use.</b> It
 /// follows the owner's standing directive of 2026-09-20 in spirit: where the shell has to help
-/// automation, the help goes in <c>TailBlazer.Avalonia</c> rather than being worked around in the
+/// automation, the help goes in <c>App.Avalonia</c> rather than being worked around in the
 /// <c>.ps1</c>. <c>Enter-HarnessSettings</c> sets the variable and <c>Exit-HarnessSettings</c> puts
 /// it back, the same save-and-restore the settings folder already gets.
 /// </para>
@@ -113,7 +113,7 @@ internal static class HarnessWindowPlacement
     /// A side is worth having rather than assuming: which edge is out of the way depends on where
     /// somebody keeps their work, and on a very wide monitor both edges are genuinely spare.
     /// </remarks>
-    private const string Variable = "TAILBLAZER_WINDOW_PARK";
+    private const string Variable = "HARNESS_WINDOW_PARK";
 
     /// <summary>Whether a harness has asked for windows to be kept out of the way.</summary>
     internal static bool Requested => Side is not null;

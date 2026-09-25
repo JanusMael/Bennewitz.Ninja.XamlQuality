@@ -4,8 +4,8 @@
 build, drive and verify a WPF-to-Avalonia port: 289 headless fixtures and 29 runtime harnesses
 that drive the real application **with no synthetic input**, run beside a person working at the
 same machine, and between them caught defects the compiler, the unit tests and code review all
-missed. The rules come first; the reasons and the traps follow. The worked examples, from
-TailBlazer's Avalonia port, are beside this guide in [`ai-drivable-ui/`](ai-drivable-ui/).
+missed. The rules come first; the reasons and the traps follow. The worked examples, from that
+port, are beside this guide in [`ai-drivable-ui/`](ai-drivable-ui/).
 
 **The one-line version: the application owns its automation surface, every claim is checked by the
 instrument that can actually see it, and no check is believed until it has been seen to fail.**
@@ -32,7 +32,7 @@ not on screen. Treat each gap as a defect in the application, with a test, not a
 Fill in what a screen reader would read as well: a control's `Name`, not only the `AutomationId` a
 harness finds it by (rule 2). Nothing in this method tests screen-reader use.
 
-**Why it is not a preference**: in TailBlazer every one of these gaps produced a *false result*
+**Why it is not a preference**: in the port every one of these gaps produced a *false result*
 before it was closed — a number that looked like a defect in the application and was an artefact
 of how it was read.
 
@@ -78,11 +78,11 @@ Windows UI Automation.
    exactly what most needs driving.
 7. **The application says what state the desktop left it in.** Publish session type, whether the
    window holds the foreground, and any test-mode placement on the main window's automation
-   `HelpText` (TailBlazer: `ShellEnvironment`), updated on activation changes. A harness then reports
+   `HelpText` (the port's `ShellEnvironment`), updated on activation changes. A harness then reports
    *why* it could not decide instead of failing opaquely.
 8. **State can be seeded without input.** If settings, saved searches, layouts or selections persist
    to files, a harness writes those files before launch and gets the application into any state
-   without driving a single control. This was the cheapest instrument the TailBlazer port had.
+   without driving a single control. This was the cheapest instrument the port had.
 9. **Test-mode behaviour is gated on environment variables a harness sets and restores**, so the
    application a person runs is untouched: an isolated settings folder (never the user's real one),
    and window placement that keeps harness windows out of the way (below).
@@ -95,7 +95,7 @@ Windows UI Automation.
 ## 3. Three instruments, three different questions
 
 **Name which one you are reading before asserting.** Substituting one for another produced the only
-wrong finding the TailBlazer port ever published.
+wrong finding the port ever published.
 
 | Instrument | Answers | Blind to |
 |---|---|---|
@@ -133,7 +133,7 @@ host takedowns to the setting behind them:
 [SandboxHarnessJournal.md](ai-drivable-ui/SandboxHarnessJournal.md).
 
 **Prefer the first two, and count the rest by what each harness DOES, not by which helper it calls.**
-TailBlazer's Avalonia set is 29 harnesses; none sends input and two need the foreground. The count
+The port's Avalonia set is 29 harnesses; none sends input and two need the foreground. The count
 was wrong for weeks when it was taken by grepping for a tool's name.
 
 **Drive through patterns, not input**: `InvokePattern` (buttons), `TogglePattern`,
@@ -161,7 +161,7 @@ the same state: it was never activated.
 **Skeleton, in order:**
 
 1. **Isolate.** Point the application at a fresh settings folder through an environment variable;
-   verify on exit that the user's real settings folder is unchanged (TailBlazer compares a manifest
+   verify on exit that the user's real settings folder is unchanged (the port compares a manifest
    of it taken on entry), and fail the run over any other verdict if it is not. Refuse to start if the application is already running.
 2. **Seed state from files** (rule 8), then start the application with its arguments.
 3. **Find the window by process id**, and scope every search to it. `RootElement` is the whole
@@ -203,13 +203,13 @@ application parks its window against a screen edge and sends it to the bottom of
 has a handle (`SetWindowPos(HWND_BOTTOM, NOMOVE|NOSIZE|NOACTIVATE)`), for **every** window it opens,
 through one helper. Windows clamps a top-level window back on screen, so "off screen" is not
 available; parking plus Z-order is. Leave an opt-out for harnesses that need the foreground.
-TailBlazer's helper, [`HarnessWindowPlacement.cs`](ai-drivable-ui/HarnessWindowPlacement.cs), does all
+The port's helper, [`HarnessWindowPlacement.cs`](ai-drivable-ui/HarnessWindowPlacement.cs), does all
 of this and the paragraph below.
 
 **And make the parked window impossible to activate: add `WS_EX_NOACTIVATE`.** Opening without
 activation (`ShowActivated = false`) only stops the window activating itself. When the person's own
 window closes or minimises and nothing of theirs sits above the harness window, Windows hands
-activation to the next window down the Z-order, and in TailBlazer a harness window took keyboard
+activation to the next window down the Z-order, and in the port a harness window took keyboard
 focus that way now and then, with nothing asking for it. `WS_EX_NOACTIVATE` in the extended style
 (`SetWindowLongPtr(GWL_EXSTYLE, …)`) is the flag Windows skips when it chooses, and it also stops a
 click from activating the window. Harnesses that drive through automation patterns never need
@@ -223,7 +223,7 @@ window whatever it is asked, so a harness that opens one takes focus once per di
 
 ## 6. No check is believed until it has been seen to fail
 
-**Break the code under a new test on purpose, see the test go red, then restore.** In TailBlazer this
+**Break the code under a new test on purpose, see the test go red, then restore.** In the port this
 refuted a claimed guard several times — a fixture that "would have caught" a bug it could not reach,
 a colour assertion satisfied by a failed capture, a flag test that passed against the old code
 because the old code happened to share its outcome.
