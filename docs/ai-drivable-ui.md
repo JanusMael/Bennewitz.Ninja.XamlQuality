@@ -57,6 +57,7 @@ Windows UI Automation.
 
 1. **Every control a test or a user needs to reach has an explicit `AutomationId`.** Do not rely on
    a framework deriving one from `x:Name`, and never find a control by its visible text.
+   XamlQuality's `BNXQ1007` checks this for the controls it knows and the ones you name.
 2. **Every control's `Name` is the value a person would read aloud**, set explicitly. Never let a
    peer fall back to a data object's `ToString()` — that is a debugging string nobody chose.
 3. **A custom control gets a peer.** A bare `Control`/`TemplatedControl` subclass has no peer a

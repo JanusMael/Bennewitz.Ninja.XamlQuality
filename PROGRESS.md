@@ -18,7 +18,9 @@ working documents are left out. A change that makes a rule stricter or adds API 
 effect on a consumer, so the release that carries it can say so. `main` takes squash and rebase
 merges only, and both give a branch's commits new hashes, so a row cites its pull request.
 
-Nothing yet.
+| Commit or PR | Change | Effect on a consumer |
+|---|---|---|
+| PR #34 | `BNXQ1007`, new: every interactive control declares an explicit `AutomationId`, the id a test or an agent searches by, as `docs/ai-drivable-ui.md`'s rule 1 asks. It covers `BNXQ1002`'s framework set and `Expander`, and takes the consumer's own control names. It reads both spellings of `AutomationProperties.AutomationId` and MAUI's plain `AutomationId`. An `x:Name` does not count, and an empty or blank id is reported as empty. Measured on Avalonia 12.1.3 through its runtime XAML loader, `x:Name` alone gives a derived id, an empty attribute gives an empty id that hides it, and an empty property element sets nothing. Rule 1 of the guide now names `BNXQ1007` as its check | New rule: nothing changes until a consumer constructs it. Adopting it means a sweep. Over each repository's GitHub `main`, it reports every control it inspects in ScopedEditors (13, at `4fbca95`), ClaudeForge (309, at `70dc713`) and DiffView (64, at `ec61a10`), all for a missing id and none for an empty one. Templates' `bbavalonia` sets its ids and reads clean, 3 inspected at `061d3ea` |
 
 ## Consumers inside the family
 
@@ -71,12 +73,11 @@ moves its pin past `2026.3.924` renames them in its test names, messages and com
 Ids are permanent, and the README's rules table is generated from them, so an id is assigned only
 when a rule is written.
 
-The rules are written in the table's order, decided on 2026-09-23. `BNXQ1005` and `BNXQ1006`, the peer
-check, are written, and the explicit `AutomationId` is next.
+The rules are written in the table's order, decided on 2026-09-23. `BNXQ1005`, `BNXQ1006`, the peer
+check, and `BNXQ1007`, the explicit `AutomationId`, are written, and the zero-size slot is next.
 
 | Candidate | Source | Fit | What it checks | What it needs |
 |---|---|---|---|---|
-| An explicit `AutomationId` on every interactive control | `ai-drivable-ui.md`, rule 1 | Best fit. ScopedEditors and OpenForge2k set none in their markup today, so adopting it means a sweep | BNXQ1002's element set, both spellings, and an empty value is not an id. For MAUI, the plain `AutomationId` attribute too | Markup only. It can check that an id is present, not that it is unique inside an item template |
 | A zero-size Grid slot whose child sets no `IsVisible` | `ai-drivable-ui.md`, rule 6 | Partial | A child of a row or column with a literal `Height="0"` or `Width="0"` | Markup only. BNXQ1004 already covers the min-size half; bound sizes and clipping cannot be decided from markup |
 | Containers generated from `ItemsSource` and named by `ToString()` | `ai-drivable-ui.md`, rule 2 | Partial | The `ItemTemplate`'s `x:DataType` overrides `ToString()`, or a container `Style` sets the name | Types. `TreeViewItem` ignores `ToString()` (measured, in `avalonia-gotchas.md`), so a tree needs the `Style` |
 
