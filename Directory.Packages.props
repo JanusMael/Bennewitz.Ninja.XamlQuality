@@ -29,6 +29,6 @@
     <PackageVersion Include="Microsoft.Testing.Extensions.TrxReport" Version="1.9.1" />
     <!-- The family's assembly rules, run over both assemblies this repository ships. Test-only,
          like everything in this group: the rules library still takes no package reference. -->
-    <PackageVersion Include="Bennewitz.Ninja.AssemblyQuality" Version="2026.3.922" />
+    <PackageVersion Include="Bennewitz.Ninja.AssemblyQuality" Version="2026.3.925" />
   </ItemGroup>
 </Project>

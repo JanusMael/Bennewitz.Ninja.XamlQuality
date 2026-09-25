@@ -13,19 +13,22 @@ namespace XamlQuality.Tests.Packaging;
 /// <remarks>
 /// <para>
 /// ⛔ <b>A rule that exists but is not run is indistinguishable from no rule.</b> AppServices'
-/// 2026.3.923 shipped AQ1001 and AQ1004 violations the day after those rules were published,
+/// 2026.3.923 shipped BNAQ1001 and BNAQ1004 violations the day after those rules were published,
 /// because nothing there ran them. Nothing here ran them either, until this class.
 /// </para>
 /// <para>
-/// ⭐ <b>AQ1003 is the first mechanical guard on this library's oldest promise.</b> "No
+/// ⭐ <b>BNAQ1003 is the first mechanical guard on this library's oldest promise.</b> "No
 /// dependencies, Avalonia included" was held by the csproj alone. A direct reference to a UI
 /// framework, a test framework, the CLI's parser or another family package now fails here.
 /// </para>
 /// <para>
-/// ⚠ <b>Zero findings means nothing unless something was inspected.</b> The scan holds every project
-/// under <c>src</c>, found by the assembly name its csproj declares, because the tool ships as
-/// <c>ThemeAudit.dll</c> rather than under its project's name. After that, an inspected count of
-/// zero is accepted only where zero is true, and that case says why.
+/// ⚠ <b>Zero findings means nothing unless something was inspected and nothing was skipped.</b> The
+/// scan holds every project under <c>src</c>, found by the assembly name its csproj declares, because
+/// the tool ships as <c>ThemeAudit.dll</c> rather than under its project's name. After that, an
+/// inspected count of zero is accepted only where zero is true, and that case says why. And a rule
+/// names in <see cref="AssemblyRuleResult.Skipped"/> what it could not examine, such as a type whose
+/// signatures name an assembly that would not load, so each test asserts it empty: a skip makes the
+/// answer incomplete, and an incomplete answer is not a clean one.
 /// </para>
 /// </remarks>
 public sealed class AssemblyQualityTests
@@ -61,33 +64,43 @@ public sealed class AssemblyQualityTests
     }
 
     [Fact]
-    public void AQ1001_no_public_method_takes_a_defaulted_cancellation_token()
+    public void BNAQ1001_no_public_method_takes_a_defaulted_cancellation_token()
     {
         AssemblyRuleResult result = new CancellationTokenRule().Analyze(AssemblyScanContext.Of(Shipped));
 
         Assert.Empty(result.Findings);
+        Assert.Empty(result.Skipped);
 
         // ⓘ Zero inspected is the truth here rather than a scan that missed: the rules and the audit
         // are synchronous, so nothing public takes a token at all. It is asserted so that the first
         // token to arrive gets looked at, instead of quietly raising a count nobody reads.
-        Assert.False(result.Inspected > 0, $"AQ1001 now inspects {result.Inspected} cancellation "
+        Assert.False(result.Inspected > 0, $"BNAQ1001 now inspects {result.Inspected} cancellation "
             + "token(s), where nothing public took one when this test was written. Confirm each is "
             + "required rather than defaulted, then assert Inspected > 0 instead.");
     }
 
     [Fact]
-    public void AQ1002_no_leak_prone_type_appears_in_the_public_surface()
+    public void BNAQ1002_no_leak_prone_type_appears_in_the_public_surface()
     {
         AssemblyRuleResult result = new SurfaceLeakRule().Analyze(AssemblyScanContext.Of(Shipped));
 
         Assert.Empty(result.Findings);
-        Assert.True(result.Inspected > 0, "AQ1002 inspected no public members, so it proved nothing.");
+        Assert.Empty(result.Skipped);
+
+        // ⓘ BNAQ1002 counts only where a leak is possible: an assembly whose references export no
+        // leak-prone namespace contributes nothing. The library references System.Text.Json, which
+        // exports System.Text.Json.Nodes, so its public surface is counted.
+        Assert.True(result.Inspected > 0, "BNAQ1002 inspected no public members, so it proved nothing. "
+            + "It counts only where a leak is possible: if the library no longer references "
+            + "System.Text.Json, scope the rule to what the shipped assemblies do reference with "
+            + "SurfaceLeakRule.Only rather than accepting the zero.");
     }
 
     [Fact]
-    public void AQ1003_no_assembly_references_a_framework_or_another_family_package()
+    public void BNAQ1003_no_assembly_references_a_framework_or_another_family_package()
     {
         List<string> findings = [];
+        List<string> skipped = [];
 
         foreach (Assembly assembly in Shipped)
         {
@@ -95,20 +108,28 @@ public sealed class AssemblyQualityTests
             AssemblyRuleResult result =
                 new ForbiddenReferenceRule(ForbiddenFor(name)).Analyze(AssemblyScanContext.Of(assembly));
 
-            Assert.True(result.Inspected > 0, $"AQ1003 inspected no references of {name}.");
+            Assert.True(result.Inspected > 0, $"BNAQ1003 inspected no references of {name}.");
             findings.AddRange(result.Findings.Select(f => f.ToString()));
+            skipped.AddRange(result.Skipped.Select(s => $"{name}: {s}"));
         }
 
         Assert.Empty(findings);
+
+        // ⓘ Forward cover: BNAQ1003 reads references by name and loads none, so at 2026.3.925 it
+        // never skips. This holds the line if a later version starts to.
+        Assert.Empty(skipped);
     }
 
     [Fact]
-    public void AQ1004_no_namespace_segment_shadows_a_referenced_root()
+    public void BNAQ1004_no_namespace_segment_shadows_a_referenced_root()
     {
-        AssemblyRuleResult result = new NamespaceShadowRule().Analyze(AssemblyScanContext.Of(Shipped));
+        // Internal types as well as public ones: a shadowing segment breaks name resolution inside
+        // the assembly that declares it, whether or not a consumer can see the type.
+        AssemblyRuleResult result = NamespaceShadowRule.IncludingInternalTypes().Analyze(AssemblyScanContext.Of(Shipped));
 
         Assert.Empty(result.Findings);
-        Assert.True(result.Inspected > 0, "AQ1004 inspected no namespaces, so it proved nothing.");
+        Assert.Empty(result.Skipped);
+        Assert.True(result.Inspected > 0, "BNAQ1004 inspected no namespaces, so it proved nothing.");
     }
 
     private static string[] ForbiddenFor(string assemblyName)
