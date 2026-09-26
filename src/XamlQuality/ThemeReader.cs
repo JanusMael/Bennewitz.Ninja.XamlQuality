@@ -307,7 +307,12 @@ internal sealed class ThemeReader(ResourceScope scope, ElementTypes types)
         return Found.Nothing;
     }
 
-    /// <summary>A setter's value, from its <c>Value</c> attribute or its <c>Setter.Value</c> element.</summary>
+    /// <summary>A setter's value: its <c>Value</c> attribute, its <c>Setter.Value</c> element, or its content.</summary>
+    /// <remarks>
+    /// ⚠ <c>Value</c> is <c>Setter</c>'s content property, so <c>&lt;Setter Property="Template"&gt;&lt;ControlTemplate&gt;</c>
+    /// sets it as surely as the other two spellings, and it is how Avalonia's own themes write their
+    /// templates. Read as empty, it made a theme's template, container theme or focus undecidable.
+    /// </remarks>
     internal static Setting ValueOf(XElement setter, XamlFile file)
     {
         if (setter.Attribute("Value") is { } attribute)
@@ -315,10 +320,16 @@ internal sealed class ThemeReader(ResourceScope scope, ElementTypes types)
             return new Setting(attribute.Value, null, file, setter);
         }
 
-        XElement? valueElement = setter.Elements().FirstOrDefault(child => child.Name.LocalName.EndsWith(".Value", StringComparison.Ordinal));
-        return valueElement?.Elements().FirstOrDefault() is { } value
-            ? new Setting(null, value, file, setter)
-            : new Setting(valueElement?.Value ?? string.Empty, null, file, setter);
+        if (setter.Elements().FirstOrDefault(child => child.Name.LocalName.EndsWith(".Value", StringComparison.Ordinal)) is { } valueElement)
+        {
+            return valueElement.Elements().FirstOrDefault() is { } value
+                ? new Setting(null, value, file, setter)
+                : new Setting(valueElement.Value, null, file, setter);
+        }
+
+        return setter.Elements().FirstOrDefault(child => !child.Name.LocalName.Contains('.', StringComparison.Ordinal)) is { } content
+            ? new Setting(null, content, file, setter)
+            : new Setting(setter.Value, null, file, setter);
     }
 
     internal static bool SetsProperty(XElement element, string property) =>
