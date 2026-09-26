@@ -46,6 +46,7 @@ people stop referencing.
 | `BNXQ1006` | Every themed custom control gets an automation peer, or declares in its own code that it has none. |
 | `BNXQ1007` | Every interactive control declares an explicit AutomationId. |
 | `BNXQ1008` | Every control in a zero-size Grid slot is hidden by IsVisible, not by the slot alone. |
+| `BNXQ1009` | Every item container generated from ItemsSource is named by what it shows, not by its item's type. |
 <!-- END GENERATED RULES -->
 
 The table above is rendered from the rule types — `Id` and `Summary` on each `IXamlRule` — and a
@@ -120,6 +121,18 @@ test or an agent still finds it. Hide it with `IsVisible`, which a binding, a `F
 arranges it: its own `MinHeight` wins, a `MaxHeight` of 0 empties it, a star of weight 0 gets
 nothing, and a span has the spacing between its slots.
 
+**`BNXQ1009` asks what names the rows a list generates.** A `ListBoxItem`, `ComboBoxItem` or
+`TabItem` generated from `ItemsSource` takes the text of a `TextBlock` at the root of its item
+template, else a name that root declares, else `ToString()` on its item: a view model that writes
+none names every row with its type's full name, and a record with its type and every property. A
+`TextBlock`'s own `AutomationProperties.Name` does not count, because its peer reads its text alone.
+A `TreeViewItem` has no fallback, so whatever its template shows, it stays unnamed until a `Style`
+for it or its `ItemContainerTheme` sets `AutomationProperties.Name`. The rule reads the item type
+from the item template's `x:DataType`, and which container a control generates, and which peer
+names it, from compiled types: pass the application's assembly to `WithAssemblies`. It checks
+Avalonia's list, tab and tree rows, whose naming was measured on 12.1.3, and leaves another
+framework's alone.
+
 **Read `Skipped` as well as `Inspected`.** Every result also names what the rule saw but could not
 check. For `BNXQ1003` that is a control with a `ControlTheme` in the scan and no part found in its
 code, a control that declares parts but has no theme in the scan, one the scanned assemblies define
@@ -132,8 +145,14 @@ whose template the scan does not hold. For `BNXQ1006` it is a themed control tha
 whose peer method could not be read, a name more than one scanned type carries, a type with no
 `OnCreateAutomationPeer` at all, and, when the scan was given no assemblies, every themed control.
 For `BNXQ1008` it is a control that nothing hides, in slots whose size depends on a value markup
-cannot evaluate, such as the bound width of a collapsing pane. None is a violation, and some are
-correct; all are places where a clean result is not what it seems.
+cannot evaluate, such as the bound width of a collapsing pane. For `BNXQ1009` it is a list whose
+rows markup does not name: one with no item template, or one whose template's `x:DataType` is
+missing or names a type the scan does not hold; an item type that is abstract, an interface or a
+control, or has a subclass that writes its own `ToString()`; a template root that names the row
+through a peer of its own, and a row whose own peer names it; a style that names the rows only in
+some state or some places, or from another view, and one that sets the list's template or the rows'
+theme; and, when the scan was given no assemblies, every `ItemsSource`. None is a violation, and some are correct; all are
+places where a clean result is not what it seems.
 
 ## Versioning
 

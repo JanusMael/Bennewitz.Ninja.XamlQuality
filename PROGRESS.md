@@ -8,7 +8,7 @@ released, who depends on what, and the rule backlog with any questions open for 
 | | |
 |---|---|
 | Published | `2026.3.925`: `Bennewitz.Ninja.XamlQuality` and `Bennewitz.Ninja.XamlQuality.ThemeAudit`, released 2026-09-25. What it changed for a consumer, with the old and new rule ids, is in its [release notes](https://github.com/JanusMael/Bennewitz.Ninja.XamlQuality/releases/tag/v2026.3.925) |
-| `main` | carries nothing unreleased |
+| `main` | carries what the next section lists, not yet released |
 | Next release | Not scheduled; the developer decides. One release per calendar day |
 
 ### On `main`, not yet released
@@ -22,6 +22,8 @@ merges only, and both give a branch's commits new hashes, so a row cites its pul
 |---|---|---|
 | PR #34 | `BNXQ1007`, new: every interactive control declares an explicit `AutomationId`, the id a test or an agent searches by, as `docs/ai-drivable-ui.md`'s rule 1 asks. It covers `BNXQ1002`'s framework set and `Expander`, and takes the consumer's own control names. It reads both spellings of `AutomationProperties.AutomationId` and MAUI's plain `AutomationId`. An `x:Name` does not count, and an empty or blank id is reported as empty. Measured on Avalonia 12.1.3 through its runtime XAML loader, `x:Name` alone gives a derived id, an empty attribute gives an empty id that hides it, and an empty property element sets nothing. Rule 1 of the guide now names `BNXQ1007` as its check | New rule: nothing changes until a consumer constructs it. Adopting it means a sweep. Over each repository's GitHub `main`, it reports every control it inspects in ScopedEditors (13, at `4fbca95`), ClaudeForge (309, at `70dc713`) and DiffView (64, at `ec61a10`), all for a missing id and none for an empty one. Templates' `bbavalonia` sets its ids and reads clean, 3 inspected at `061d3ea` |
 | PR #35 | `BNXQ1008`, new: every control in a zero-size `Grid` slot is hidden by `IsVisible`, not by the slot alone, as `docs/ai-drivable-ui.md`'s rule 6 asks. It covers a control that asks for no size in that direction, in fixed slots that add up to none, and leaves one that asks for a size to `BNXQ1004`. A slot's size is read as the framework arranges it: its own `MinHeight` first, then a `MaxHeight` of 0, then a star of weight 0, and a span has the spacing between its slots. Any `IsVisible` but a literal `True` answers it, and so does WPF's `Visibility` but `Visible`. A slot whose size markup cannot evaluate is named in `Skipped`. Measured on Avalonia 12.1.3 in a headless window: a `Button` in a row of `Height="0"` is arranged 0 tall and stays in the automation tree, reporting `IsOffscreen` false, a Fluent `TextBox` there is arranged 32 tall over its neighbours, and `IsVisible="False"` takes the `Button` out of the tree. `BNXQ1004`'s reading of a grid moves into `GridLayout`, which both rules share, unchanged: its output over the family's markup and Avalonia's repository is byte for byte the same. Rule 6 of the guide, and the layout-clip entry in `docs/avalonia-gotchas.md`, now name `BNXQ1008` | New rule: nothing changes until a consumer constructs it. Over each repository's GitHub `main` it finds nothing: ClaudeForge inspects 32 (`70dc713`), DiffView 3 (`ec61a10`), and ScopedEditors (`c31b8cb`) and Templates (`061d3ea`) none. Over Avalonia's own repository it inspects 134 and names 4 in `Skipped`: the `SplitView` templates, Fluent and Simple, size the pane's column or row by a binding |
+| PR #37 | A theme's setter whose value is written as its content, as in `<Setter Property="Template"><ControlTemplate>`, is read. `Value` is `Setter`'s content property, and Avalonia's own themes write their templates that way, but the reading `BNXQ1005` shares with `BNXQ1009`, `ThemeReader`, took such a value for empty | `BNXQ1005`: a theme that sets `Focusable`, `ItemContainerTheme`, an item template, a template or a content template as a setter's content was named in `Skipped`, as a value markup cannot evaluate. It is now followed, so such a skip can become a verdict, a finding among them. No consumer in the family runs `BNXQ1005` yet, and over ClaudeForge's markup and build output (`70dc713`) it inspects and skips nothing, before and after |
+| PR #37 | `BNXQ1009`, new: every item container generated from `ItemsSource` is named by what it shows, not by its item's type, as `docs/ai-drivable-ui.md`'s rule 2 asks. A `ListBoxItem`, `ComboBoxItem` or `TabItem` that nothing names falls back to `ToString()` on its item, and a `TreeViewItem` to nothing. In the framework's order, the rule reads a style reaching the host whose selector is the container type alone, the `ItemContainerTheme` or implicit container theme, `DisplayMemberBinding`, and the item template's root. Last it reads the `ToString()` that the template's `x:DataType` resolves to, and reports `object`'s, `ValueType`'s or a record's. A row is recognised by the peer its container creates, read from IL, so another framework's rows are left alone. Measured on Avalonia 12.1.3 in a headless window: each container's fallback, each shape of template root, `DisplayMemberBinding`, a class, record, struct, enum, string and subclass as the item, a type selector against `:is()`, a state and a context selector, and both ways of naming a tree. The rest of what the tests take, such as a blank name, a class selector, or a style or theme placed elsewhere, follows from the framework's source or from how markup is read. `ResourceScope` gains the styles that reach an element, and `ElementTypes` a type by namespace and name. `BNXQ1005`'s theme reading moves, unchanged, into the `ThemeReader` both rules share. The three gotchas entries on generated containers, and rule 2 of the guide, now name `BNXQ1009` | New rule: nothing changes until a consumer constructs it. Over ClaudeForge's GitHub `main` (`70dc713`) and its build output it inspects 14, finds nothing, and names in `Skipped` 6 `ComboBox`es with no item template. At `7c110d4`, before ClaudeForge's two fixes, it reports exactly the six controls those fixes went on to change: two navigation trees whose rows UI Automation read as empty, and four lists whose rows a view-model type named, one of them read through UI Automation |
 
 ## Consumers inside the family
 
@@ -75,13 +77,9 @@ moves its pin past `2026.3.924` renames them in its test names, messages and com
 Ids are permanent, and the README's rules table is generated from them, so an id is assigned only
 when a rule is written.
 
-The rules are written in the table's order, decided on 2026-09-23. `BNXQ1005`, `BNXQ1006`, the peer
-check, `BNXQ1007`, the explicit `AutomationId`, and `BNXQ1008`, the zero-size slot, are written, and
-the `ToString()` containers are next.
-
-| Candidate | Source | Fit | What it checks | What it needs |
-|---|---|---|---|---|
-| Containers generated from `ItemsSource` and named by `ToString()` | `ai-drivable-ui.md`, rule 2 | Partial | The `ItemTemplate`'s `x:DataType` overrides `ToString()`, or a container `Style` sets the name | Types. `TreeViewItem` ignores `ToString()` (measured, in `avalonia-gotchas.md`), so a tree needs the `Style` |
+The rules were written in the order decided on 2026-09-23, and all of them are now: `BNXQ1005`,
+`BNXQ1006`, the peer check, `BNXQ1007`, the explicit `AutomationId`, `BNXQ1008`, the zero-size slot,
+and `BNXQ1009`, the `ToString()` containers. No candidate is open.
 
 **Not a fit:** the guide's rule 10, keeping popups in the window's tree. Avalonia's `OverlayPopups` is
 set in C# at startup, where no markup scan can see it. That check belongs in the application, as a
@@ -110,3 +108,9 @@ None open.
     MinHeight="20"` is arranged 20 tall, a `MaxHeight` of 0 empties any row, and `0*` gets nothing.
     `GridLayout.SlotBounds` already carries them, so the change is `BNXQ1004` measuring against
     them too.
+- **`BNXQ1009` reads an item type only from an item template's `x:DataType`.** A list with no item
+  template, or a template that declares none, is named in `Skipped`, as all 6 of ClaudeForge's skips
+  are. Reading the type from the `ItemsSource` binding's path, through the view's own `x:DataType`,
+  would decide most of them. It can add findings, so it is a change of its own.
+- **`BNXQ1009` checks Avalonia's rows only.** WPF's `ListBoxItem` is named through a different peer,
+  whose fallback was not measured. Measuring it is what would let the rule check WPF markup.

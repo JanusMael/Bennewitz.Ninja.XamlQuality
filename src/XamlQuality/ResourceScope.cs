@@ -89,6 +89,7 @@ internal sealed partial class ResourceScope
     private readonly Dictionary<XDocument, XamlFile> _fileOf = [];
     private readonly Dictionary<string, List<Definition>> _definitions = new(StringComparer.Ordinal);
     private readonly List<StyleSetter> _styleSetters = [];
+    private readonly List<(XamlFile File, XElement Style)> _styles = [];
     private readonly List<XamlFile> _applications = [];
 
     internal ResourceScope(XamlScanContext context)
@@ -122,6 +123,7 @@ internal sealed partial class ResourceScope
                     && element.Attribute("Selector") is { } selector
                     && !element.Ancestors().Any(ancestor => ancestor.Name.LocalName == "ControlTheme"))
                 {
+                    _styles.Add((file, element));
                     HashSet<string> mentions = [.. Identifier().Matches(selector.Value).Select(match => match.Value)];
                     foreach (XElement setter in element.Elements().Where(child => child.Name.LocalName == "Setter"))
                     {
@@ -226,6 +228,85 @@ internal sealed partial class ResourceScope
     internal IReadOnlyList<StyleSetter> StylesSetting(IReadOnlyCollection<string> typeNames, params string[] properties) =>
         [.. _styleSetters.Where(setter => properties.Contains(setter.Property, StringComparer.Ordinal)
                                           && setter.Mentions.Overlaps(typeNames))];
+
+    /// <summary>Every <c>Style</c> in the scan that has a selector and is not inside a <c>ControlTheme</c>, nested ones included.</summary>
+    internal IReadOnlyList<(XamlFile File, XElement Style)> Styles => _styles;
+
+    /// <summary>
+    /// Every <c>Style</c> that reaches <paramref name="from"/> as far as markup shows it: those in its
+    /// own <c>Styles</c> and each ancestor's, then the application's, with the styles nested in them
+    /// and those in the files a <c>StyleInclude</c> names.
+    /// </summary>
+    /// <remarks>
+    /// ⚠ <b>The same reach as an implicit theme's.</b> A style in another file that nothing on this path
+    /// includes may still reach the element from the view it is placed in at runtime, and one beside it
+    /// in the same file does not. <see cref="Styles"/> holds them all, for a caller to say which may.
+    /// </remarks>
+    internal IReadOnlyList<(XamlFile File, XElement Style)> StylesReaching(XElement from)
+    {
+        List<(XamlFile File, XElement Style)> styles = [];
+        HashSet<XElement> seen = [];
+
+        if (FileOf(from) is { } file)
+        {
+            for (XElement? scope = from; scope is not null; scope = scope.Parent)
+            {
+                foreach (XElement slot in scope.Elements().Where(child => child.Name.LocalName.EndsWith(".Styles", StringComparison.Ordinal)))
+                {
+                    CollectStyles(slot, file, styles, seen, []);
+                }
+            }
+        }
+
+        foreach (XamlFile application in _applications)
+        {
+            foreach (XElement slot in application.Document!.Root!.Elements()
+                         .Where(child => child.Name.LocalName.EndsWith(".Styles", StringComparison.Ordinal)))
+            {
+                CollectStyles(slot, application, styles, seen, []);
+            }
+        }
+
+        return styles;
+    }
+
+    /// <summary>The styles a styles collection or a style holds, following includes to files in the scan.</summary>
+    private void CollectStyles(
+        XElement holder, XamlFile file, List<(XamlFile File, XElement Style)> styles, HashSet<XElement> seen, HashSet<XamlFile> visited)
+    {
+        foreach (XElement child in holder.Elements())
+        {
+            switch (child.Name.LocalName)
+            {
+                case "Style":
+                    if (seen.Add(child) && child.Attribute("Selector") is not null)
+                    {
+                        styles.Add((file, child));
+                    }
+
+                    CollectStyles(child, file, styles, seen, visited);
+                    break;
+                case "Styles":
+                    CollectStyles(child, file, styles, seen, visited);
+                    break;
+                case "StyleInclude":
+                    if (child.Attribute("Source")?.Value is { } source
+                        && ResolveSource(source, file) is { } target
+                        && visited.Add(target))
+                    {
+                        XElement root = target.Document!.Root!;
+                        if (root.Name.LocalName == "Style" && seen.Add(root) && root.Attribute("Selector") is not null)
+                        {
+                            styles.Add((target, root));
+                        }
+
+                        CollectStyles(root, target, styles, seen, visited);
+                    }
+
+                    break;
+            }
+        }
+    }
 
     /// <summary>Where <paramref name="key"/> resolves from <paramref name="from"/>.</summary>
     /// <param name="key">A normalised key.</param>
