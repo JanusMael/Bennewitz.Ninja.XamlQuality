@@ -45,6 +45,7 @@ people stop referencing.
 | `BNXQ1005` | Every key binding on an items control sits where keyboard focus can reach it. |
 | `BNXQ1006` | Every themed custom control gets an automation peer, or declares in its own code that it has none. |
 | `BNXQ1007` | Every interactive control declares an explicit AutomationId. |
+| `BNXQ1008` | Every control in a zero-size Grid slot is hidden by IsVisible, not by the slot alone. |
 <!-- END GENERATED RULES -->
 
 The table above is rendered from the rule types — `Id` and `Summary` on each `IXamlRule` — and a
@@ -111,6 +112,14 @@ covers `BNXQ1002`'s framework set and `Expander`, which no other rule checks for
 your own control names as `BNXQ1002` does. It checks that an id is present, not that it is unique: a
 control in an item template declares one id for every row.
 
+**`BNXQ1008` is the other half of `BNXQ1004`.** A control that asks for a size in a slot too small
+for it is `BNXQ1004`'s. One that asks for none, in slots that add up to no size, is this rule's: a
+zero-height row or zero-width column hides it from people and not from the automation tree, where a
+test or an agent still finds it. Hide it with `IsVisible`, which a binding, a `False` or WPF's
+`Visibility` satisfies and an explicit `True` does not. A slot's size is read as the framework
+arranges it: its own `MinHeight` wins, a `MaxHeight` of 0 empties it, a star of weight 0 gets
+nothing, and a span has the spacing between its slots.
+
 **Read `Skipped` as well as `Inspected`.** Every result also names what the rule saw but could not
 check. For `BNXQ1003` that is a control with a `ControlTheme` in the scan and no part found in its
 code, a control that declares parts but has no theme in the scan, one the scanned assemblies define
@@ -122,8 +131,9 @@ focus, rows with no item template, rows that present items of their own as a tre
 whose template the scan does not hold. For `BNXQ1006` it is a themed control that did not load or
 whose peer method could not be read, a name more than one scanned type carries, a type with no
 `OnCreateAutomationPeer` at all, and, when the scan was given no assemblies, every themed control.
-None is a violation, and some are correct; all are places where a clean result is not what it
-seems.
+For `BNXQ1008` it is a control that nothing hides, in slots whose size depends on a value markup
+cannot evaluate, such as the bound width of a collapsing pane. None is a violation, and some are
+correct; all are places where a clean result is not what it seems.
 
 ## Versioning
 

@@ -1,6 +1,5 @@
-using System.Globalization;
-using System.Xml;
 using System.Xml.Linq;
+using static Bennewitz.Ninja.XamlQuality.GridLayout;
 
 namespace Bennewitz.Ninja.XamlQuality.Rules;
 
@@ -43,9 +42,8 @@ namespace Bennewitz.Ninja.XamlQuality.Rules;
 /// <para>
 /// ⚠ <b>Two spellings, and checking one is how a rule quietly passes.</b> Definitions are written
 /// either as the attribute shorthand (<c>RowDefinitions="Auto,0,*"</c>) or as property ELEMENTS
-/// (<c>&lt;Grid.RowDefinitions&gt;&lt;RowDefinition Height="0"/&gt;…</c>). The shorthand is more
-/// common in hand-written markup, which is exactly why the element form is the one that goes
-/// unhandled.
+/// (<c>&lt;Grid.RowDefinitions&gt;&lt;RowDefinition Height="0"/&gt;…</c>), and both are read, through
+/// <see cref="GridLayout"/>, which <c>BNXQ1008</c> shares.
 /// </para>
 /// <para>
 /// ⓘ The fix is <c>IsVisible</c>, never <c>ClipToBounds</c>: it removes the element from layout AND
@@ -56,12 +54,6 @@ namespace Bennewitz.Ninja.XamlQuality.Rules;
 /// </remarks>
 public sealed class GridSlotOverflowRule : IXamlRule
 {
-    private static readonly Dimension Rows = new(
-        "RowDefinitions", "RowDefinition", "Row", "RowSpan", "RowSpacing", "MinHeight", "Height", "row", "height", "tall");
-
-    private static readonly Dimension Columns = new(
-        "ColumnDefinitions", "ColumnDefinition", "Column", "ColumnSpan", "ColumnSpacing", "MinWidth", "Width", "column", "width", "wide");
-
     /// <inheritdoc />
     public string Id => "BNXQ1004";
 
@@ -206,182 +198,6 @@ public sealed class GridSlotOverflowRule : IXamlRule
             + "ClipToBounds does not.");
     }
 
-    /// <summary>
-    /// Slot sizes in order, or <c>null</c> when the grid declares none, which the framework treats as
-    /// one <c>*</c> slot.
-    /// </summary>
-    /// <remarks>
-    /// ⚠ Reads BOTH spellings. The attribute shorthand wins when both are present, matching the
-    /// framework — but markup carrying both is already confusing enough that the rule does not try
-    /// to be clever about it. A shorthand that is a markup extension as a whole is one unevaluated
-    /// value, never split at the commas inside it.
-    /// </remarks>
-    private static Definitions? DefinitionsOf(XElement grid, Dimension names)
-    {
-        XAttribute? shorthand = grid.Attributes()
-            .FirstOrDefault(a => string.Equals(a.Name.LocalName, names.Definitions, StringComparison.Ordinal));
-
-        if (shorthand is not null)
-        {
-            if (IsMarkupExtension(shorthand.Value))
-            {
-                return new Definitions([], new Length(Kind.Unknown, 0, $"{names.Definitions}=\"{shorthand.Value}\""));
-            }
-
-            Length[] entries = [.. shorthand.Value
-                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
-                .Select((entry, i) => Slot(entry, $"{names.SlotWord} {i}'s {names.SizeWord} \"{entry}\""))];
-
-            return entries.Length == 0 ? null : new Definitions(entries, null);
-        }
-
-        XElement? collection = grid.Elements()
-            .FirstOrDefault(e => e.Name.LocalName.EndsWith(names.Definitions, StringComparison.Ordinal));
-
-        if (collection is null) { return null; }
-
-        Length[] items = [.. collection.Elements()
-            .Where(e => string.Equals(e.Name.LocalName, names.Definition, StringComparison.Ordinal))
-            .Select((e, i) => e.Attributes()
-                    .FirstOrDefault(a => string.Equals(a.Name.LocalName, names.Size, StringComparison.Ordinal)) is { } size
-                ? Slot(size.Value, $"{names.SlotWord} {i}'s {names.Size}=\"{size.Value}\"")
-                : Length.Flexible)];   // Unset, a definition is *.
-
-        return items.Length == 0 ? null : new Definitions(items, null);
-    }
-
-    /// <summary>
-    /// The grid's <c>RowSpacing</c> or <c>ColumnSpacing</c>, in either spelling: 0 when unset, as the
-    /// framework treats it.
-    /// </summary>
-    /// <remarks>
-    /// ⚠ Any finite number is a spacing, a negative one included. The framework does not validate
-    /// spacing, and applies a negative one as it is, overlapping the slots a span crosses.
-    /// </remarks>
-    private static Length SpacingOf(XElement grid, string property)
-    {
-        if (grid.Attributes().FirstOrDefault(a => string.Equals(a.Name.LocalName, property, StringComparison.Ordinal))
-            is { } attribute)
-        {
-            return Gap(attribute.Value, $"{property}=\"{attribute.Value}\"");
-        }
-
-        if (grid.Elements().FirstOrDefault(e => e.Name.LocalName.EndsWith("." + property, StringComparison.Ordinal))
-            is { } element)
-        {
-            return element.Elements().FirstOrDefault() is { } content
-                ? new Length(Kind.Unknown, 0, $"{element.Name.LocalName} holding <{content.Name.LocalName}>")
-                : Gap(element.Value, $"{property}=\"{element.Value.Trim()}\"");
-        }
-
-        return new Length(Kind.Fixed, 0, string.Empty);
-    }
-
-    private static Length Gap(string raw, string shown) =>
-        double.TryParse(raw.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
-            && double.IsFinite(value)
-            ? new Length(Kind.Fixed, value, shown)
-            : new Length(Kind.Unknown, 0, shown);
-
-    /// <summary>
-    /// What the control asks for: its <c>MinWidth</c> when that is a literal size, else its
-    /// <c>Width</c>; and, when neither is literal, which of them markup cannot evaluate.
-    /// </summary>
-    private static (Length Declared, string[] Unevaluated) DeclaredSize(XElement child, Dimension names)
-    {
-        Length minimum = SizeOf(child, names.MinSize);
-        Length size = SizeOf(child, names.Size);
-
-        Length declared = minimum.Kind == Kind.Fixed ? minimum
-            : size.Kind == Kind.Fixed ? size
-            : minimum.Kind == Kind.Unknown ? minimum
-            : size;
-
-        return (declared, [.. ((Length[])[minimum, size]).Where(value => value.Kind == Kind.Unknown).Select(value => value.Shown)]);
-    }
-
-    private static Length SizeOf(XElement element, string property)
-    {
-        XAttribute? attribute = element.Attributes()
-            .FirstOrDefault(a => string.Equals(a.Name.LocalName, property, StringComparison.Ordinal));
-
-        if (attribute is null) { return Length.Flexible; }
-
-        string text = attribute.Value.Trim();
-        string shown = $"{property}=\"{attribute.Value}\"";
-
-        // NaN is how a control says its size is unset, and WPF spells the same thing Auto.
-        return IsMarkupExtension(text) ? new Length(Kind.Unknown, 0, shown)
-            : string.Equals(text, "NaN", StringComparison.OrdinalIgnoreCase) || IsAuto(text) ? Length.Flexible
-            : Amount(text, shown);
-    }
-
-    /// <summary>
-    /// A slot's size as the framework's parser reads it: <c>Auto</c> in any case, a trailing
-    /// <c>*</c> for a star, and otherwise a number.
-    /// </summary>
-    private static Length Slot(string raw, string shown)
-    {
-        string text = raw.Trim();
-        return IsMarkupExtension(text) ? new Length(Kind.Unknown, 0, shown)
-            : IsAuto(text) || text.EndsWith('*') ? Length.Flexible
-            : Amount(text, shown);
-    }
-
-    /// <summary>A finite, non-negative number is a fixed size; anything else is not one markup states.</summary>
-    private static Length Amount(string raw, string shown) =>
-        double.TryParse(raw.Trim(), NumberStyles.Float, CultureInfo.InvariantCulture, out double value)
-            && double.IsFinite(value) && value >= 0
-            ? new Length(Kind.Fixed, value, shown)
-            : new Length(Kind.Unknown, 0, shown);
-
-    /// <summary>
-    /// An attached <c>Grid</c> integer, the <c>Row</c>, <c>Column</c> or a span:
-    /// <paramref name="fallback"/> when unset, as the framework does, and unknown when the value is not
-    /// a literal integer the framework accepts.
-    /// </summary>
-    private static Placement Attached(XElement element, string property, int fallback, int minimum)
-    {
-        XAttribute? attribute = element.Attributes().FirstOrDefault(a =>
-            a.Name.LocalName.EndsWith(property, StringComparison.Ordinal)
-            && a.Name.LocalName.Contains("Grid", StringComparison.Ordinal));
-
-        if (attribute is null) { return new Placement(fallback, string.Empty); }
-
-        return int.TryParse(attribute.Value, NumberStyles.Integer, CultureInfo.InvariantCulture, out int value)
-            && value >= minimum
-            ? new Placement(value, string.Empty)
-            : new Placement(null, $"{attribute.Name.LocalName}=\"{attribute.Value}\"");
-    }
-
-    private static bool IsMarkupExtension(string value) =>
-        value.TrimStart().StartsWith('{');
-
-    private static bool IsAuto(string text) =>
-        string.Equals(text, "Auto", StringComparison.OrdinalIgnoreCase);
-
-    private static string Join(List<string> values) =>
-        values.Count == 1 ? values[0] : $"{string.Join(", ", values.Take(values.Count - 1))} and {values[^1]}";
-
-    private static int? LineOf(XElement element) =>
-        (element as IXmlLineInfo).HasLineInfo() ? ((IXmlLineInfo)element).LineNumber : null;
-
-    private static string Format(double value) =>
-        value.ToString("0.##", CultureInfo.InvariantCulture);
-
-    /// <summary>How a size reads from markup.</summary>
-    private enum Kind
-    {
-        /// <summary>A literal size.</summary>
-        Fixed,
-
-        /// <summary>No fixed size: <c>Auto</c> or <c>*</c> for a slot, and unset for a control.</summary>
-        Flexible,
-
-        /// <summary>A value markup cannot evaluate: a binding, a resource, or text that is not a size.</summary>
-        Unknown,
-    }
-
     private enum Outcome
     {
         NotASubject,
@@ -389,41 +205,6 @@ public sealed class GridSlotOverflowRule : IXamlRule
         Overflows,
         Undecided,
     }
-
-    /// <summary>A size as markup states it, and how to name it in a message.</summary>
-    private readonly record struct Length(Kind Kind, double Value, string Shown)
-    {
-        public static Length Flexible => new(Kind.Flexible, 0, string.Empty);
-    }
-
-    /// <summary>A grid's index or span: <c>null</c> when markup cannot evaluate it.</summary>
-    private readonly record struct Placement(int? Value, string Shown);
-
-    /// <summary>
-    /// A grid's slots in one direction, or the one value they all come from when markup cannot
-    /// evaluate it.
-    /// </summary>
-    private sealed record Definitions(IReadOnlyList<Length> Slots, Length? Unevaluated);
-
-    /// <summary>One direction of a grid, read once for all its children.</summary>
-    private sealed record Axis(Dimension Names, Definitions? Definitions, Length Spacing)
-    {
-        public static Axis Of(XElement grid, Dimension names) =>
-            new(names, DefinitionsOf(grid, names), SpacingOf(grid, names.Spacing));
-    }
-
-    /// <summary>The property names and words one direction of a grid is written and reported in.</summary>
-    private sealed record Dimension(
-        string Definitions,
-        string Definition,
-        string Index,
-        string Span,
-        string Spacing,
-        string MinSize,
-        string Size,
-        string SlotWord,
-        string SizeWord,
-        string DimensionWord);
 
     private readonly record struct Verdict(Outcome Outcome, string Text)
     {

@@ -21,6 +21,7 @@ merges only, and both give a branch's commits new hashes, so a row cites its pul
 | Commit or PR | Change | Effect on a consumer |
 |---|---|---|
 | PR #34 | `BNXQ1007`, new: every interactive control declares an explicit `AutomationId`, the id a test or an agent searches by, as `docs/ai-drivable-ui.md`'s rule 1 asks. It covers `BNXQ1002`'s framework set and `Expander`, and takes the consumer's own control names. It reads both spellings of `AutomationProperties.AutomationId` and MAUI's plain `AutomationId`. An `x:Name` does not count, and an empty or blank id is reported as empty. Measured on Avalonia 12.1.3 through its runtime XAML loader, `x:Name` alone gives a derived id, an empty attribute gives an empty id that hides it, and an empty property element sets nothing. Rule 1 of the guide now names `BNXQ1007` as its check | New rule: nothing changes until a consumer constructs it. Adopting it means a sweep. Over each repository's GitHub `main`, it reports every control it inspects in ScopedEditors (13, at `4fbca95`), ClaudeForge (309, at `70dc713`) and DiffView (64, at `ec61a10`), all for a missing id and none for an empty one. Templates' `bbavalonia` sets its ids and reads clean, 3 inspected at `061d3ea` |
+| PR #35 | `BNXQ1008`, new: every control in a zero-size `Grid` slot is hidden by `IsVisible`, not by the slot alone, as `docs/ai-drivable-ui.md`'s rule 6 asks. It covers a control that asks for no size in that direction, in fixed slots that add up to none, and leaves one that asks for a size to `BNXQ1004`. A slot's size is read as the framework arranges it: its own `MinHeight` first, then a `MaxHeight` of 0, then a star of weight 0, and a span has the spacing between its slots. Any `IsVisible` but a literal `True` answers it, and so does WPF's `Visibility` but `Visible`. A slot whose size markup cannot evaluate is named in `Skipped`. Measured on Avalonia 12.1.3 in a headless window: a `Button` in a row of `Height="0"` is arranged 0 tall and stays in the automation tree, reporting `IsOffscreen` false, a Fluent `TextBox` there is arranged 32 tall over its neighbours, and `IsVisible="False"` takes the `Button` out of the tree. `BNXQ1004`'s reading of a grid moves into `GridLayout`, which both rules share, unchanged: its output over the family's markup and Avalonia's repository is byte for byte the same. Rule 6 of the guide, and the layout-clip entry in `docs/avalonia-gotchas.md`, now name `BNXQ1008` | New rule: nothing changes until a consumer constructs it. Over each repository's GitHub `main` it finds nothing: ClaudeForge inspects 32 (`70dc713`), DiffView 3 (`ec61a10`), and ScopedEditors (`c31b8cb`) and Templates (`061d3ea`) none. Over Avalonia's own repository it inspects 134 and names 4 in `Skipped`: the `SplitView` templates, Fluent and Simple, size the pane's column or row by a binding |
 
 ## Consumers inside the family
 
@@ -74,11 +75,11 @@ Ids are permanent, and the README's rules table is generated from them, so an id
 when a rule is written.
 
 The rules are written in the table's order, decided on 2026-09-23. `BNXQ1005`, `BNXQ1006`, the peer
-check, and `BNXQ1007`, the explicit `AutomationId`, are written, and the zero-size slot is next.
+check, `BNXQ1007`, the explicit `AutomationId`, and `BNXQ1008`, the zero-size slot, are written, and
+the `ToString()` containers are next.
 
 | Candidate | Source | Fit | What it checks | What it needs |
 |---|---|---|---|---|
-| A zero-size Grid slot whose child sets no `IsVisible` | `ai-drivable-ui.md`, rule 6 | Partial | A child of a row or column with a literal `Height="0"` or `Width="0"` | Markup only. BNXQ1004 already covers the min-size half; bound sizes and clipping cannot be decided from markup |
 | Containers generated from `ItemsSource` and named by `ToString()` | `ai-drivable-ui.md`, rule 2 | Partial | The `ItemTemplate`'s `x:DataType` overrides `ToString()`, or a container `Style` sets the name | Types. `TreeViewItem` ignores `ToString()` (measured, in `avalonia-gotchas.md`), so a tree needs the `Style` |
 
 **Not a fit:** the guide's rule 10, keeping popups in the window's tree. Avalonia's `OverlayPopups` is
@@ -91,14 +92,20 @@ None open.
 
 ## Follow-ups
 
-- **BNXQ1004 reads four things more narrowly than the framework.** Found while building PR #20, and
-  left for a change of their own, because each can add findings or skips on a consumer's markup:
-  - The shorthand is split at commas only. Avalonia's parser also splits at whitespace
-    (`GridLength.ParseLengths`, read from source), so `ColumnDefinitions="Auto 16 *"` reads as one
-    star column.
-  - `Grid.Row`, `Grid.Column` and the spans are read only as attributes, so one written as a
-    property element is measured as row or column 0.
+- **BNXQ1004 reads five things more narrowly than the framework, and `BNXQ1008` shares three of
+  them through `GridLayout`.** The first four were found while building PR #20, and each is left
+  for a change of its own, because each can add findings or skips on a consumer's markup:
+  - The shorthand is split at commas only, in both rules. Avalonia's parser also splits at
+    whitespace (`GridLength.ParseLengths`, read from source), so `ColumnDefinitions="Auto 16 *"`
+    reads as one star column.
+  - `Grid.Row`, `Grid.Column` and the spans are read only as attributes, in both rules, so one
+    written as a property element is placed in row or column 0.
   - A control that sets a literal `MinWidth` and a larger literal `Width` is measured by its
     `MinWidth`. The framework arranges it at the larger, unless a `MaxWidth` caps it.
-  - WPF's unit suffixes (`px`, `in`, `cm`, `pt`) are not read, so a size written with one is named
-    in `Skipped`.
+  - WPF's unit suffixes (`px`, `in`, `cm`, `pt`) are not read, in both rules, so a size written with
+    one is named in `Skipped`.
+  - A definition's own `MinHeight` and `MaxHeight`, and a star of weight 0, are read by `BNXQ1008`
+    and not by `BNXQ1004`. Measured on Avalonia 12.1.3 in PR #35, a row of `Height="0"
+    MinHeight="20"` is arranged 20 tall, a `MaxHeight` of 0 empties any row, and `0*` gets nothing.
+    `GridLayout.SlotBounds` already carries them, so the change is `BNXQ1004` measuring against
+    them too.
