@@ -206,6 +206,36 @@ public sealed class KeyBindingFocusRuleTests : IDisposable
         AssertDead(Run());
     }
 
+    /// <summary>
+    /// ⭐ So does a setter's value written as its content: <c>Value</c> is <c>Setter</c>'s content
+    /// property, and Avalonia's own themes write their templates that way.
+    /// </summary>
+    [Fact]
+    public void TheSetterContentSpelling_Counts()
+    {
+        Write("View.axaml", View("", List(
+            "<ListBox.ItemContainerTheme><ControlTheme TargetType=\"ListBoxItem\">"
+            + "<Setter Property=\"Focusable\">False</Setter></ControlTheme></ListBox.ItemContainerTheme>"
+            + TextRows)));
+
+        AssertDead(Run());
+    }
+
+    /// <summary>A container theme that a list's theme writes as a setter's content is followed like one it names.</summary>
+    [Fact]
+    public void AnItemContainerThemeWrittenAsASettersContent_IsFollowed()
+    {
+        Write("View.axaml", View(
+            "<UserControl.Resources>"
+            + "<ControlTheme x:Key=\"{x:Type ListBox}\" TargetType=\"ListBox\"><Setter Property=\"ItemContainerTheme\">"
+            + "<ControlTheme TargetType=\"ListBoxItem\"><Setter Property=\"Focusable\" Value=\"False\" /></ControlTheme>"
+            + "</Setter></ControlTheme>"
+            + "</UserControl.Resources>",
+            List(TextRows)));
+
+        AssertDead(Run());
+    }
+
     /// <summary>A theme that sets nothing itself inherits what its base sets. Measured: 0 runs.</summary>
     [Fact]
     public void AFocusableInheritedThroughBasedOn_Counts()
