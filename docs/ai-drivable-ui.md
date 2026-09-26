@@ -60,6 +60,8 @@ Windows UI Automation.
    XamlQuality's `BNXQ1007` checks this for the controls it knows and the ones you name.
 2. **Every control's `Name` is the value a person would read aloud**, set explicitly. Never let a
    peer fall back to a data object's `ToString()` — that is a debugging string nobody chose.
+   XamlQuality's `BNXQ1009` checks this for the rows a list, a tab control or a tree generates from
+   `ItemsSource`.
 3. **A custom control gets a peer.** A bare `Control`/`TemplatedControl` subclass has no peer a
    control-view search can reach, so an `AutomationId` on it appears nowhere. Override
    `OnCreateAutomationPeer`; name the peer with what the control *shows*; put it beside the control.

@@ -10,8 +10,8 @@ namespace XamlQuality.Tests.Rules;
 /// ⭐ <b>A rule returns findings; it never throws.</b> Before this, <see cref="TemplatePartRule"/>
 /// threw <c>FileNotFoundException</c> from the first method body that named a type it could not load,
 /// and <see cref="KeyBindingFocusRule"/> told the consumer to pass the assembly they had passed.
-/// <see cref="CustomControlPeerRule"/> reads compiled code too, and is held to the same. The fixture
-/// is <see cref="UnloadableAssembly"/>.
+/// <see cref="CustomControlPeerRule"/> and <see cref="ItemContainerNameRule"/> read compiled code too,
+/// and are held to the same. The fixture is <see cref="UnloadableAssembly"/>.
 /// </remarks>
 public sealed class UnloadableBuildOutputTests : IDisposable
 {
@@ -38,6 +38,9 @@ public sealed class UnloadableBuildOutputTests : IDisposable
     private static string KeyBindingOn(string host) =>
         $"<UserControl xmlns=\"https://github.com/avaloniaui\"><{host}><{host}.KeyBindings>"
         + $"<KeyBinding Gesture=\"Ctrl+K\" /></{host}.KeyBindings></{host}></UserControl>";
+
+    private static string ItemsSourceOn(string host) =>
+        $"<UserControl xmlns=\"https://github.com/avaloniaui\"><{host} ItemsSource=\"{{Binding Rows}}\" /></UserControl>";
 
     /// <summary>
     /// ⛔ BNXQ1003's control whose base type does not load is named with what stopped it. Read as a
@@ -152,5 +155,19 @@ public sealed class UnloadableBuildOutputTests : IDisposable
 
         XamlSkip skip = Assert.Single(result.Skipped);
         Assert.Contains("DepBase is not a type in the scanned assemblies, and Dep, which they reference, could not be loaded", skip.Reason, StringComparison.Ordinal);
+    }
+
+    /// <summary>⛔ BNXQ1009 says the same of a control that does not load, rather than throwing or guessing.</summary>
+    [Fact]
+    public void BNXQ1009_AControlThatDoesNotLoad_SaysSo_NotThatItWasNotPassed()
+    {
+        XamlRuleResult result = new ItemContainerNameRule().Analyze(Scan(ItemsSourceOn("Thing")));
+
+        Assert.Empty(result.Findings);
+        Assert.Equal(0, result.Inspected);
+        XamlSkip skip = Assert.Single(result.Skipped);
+        Assert.Equal("Thing", skip.Subject);
+        Assert.Contains("Thing, defined in Consumer, could not be loaded: Dep could not be found", skip.Reason, StringComparison.Ordinal);
+        Assert.DoesNotContain("Pass the assembly that defines it", skip.Reason, StringComparison.Ordinal);
     }
 }

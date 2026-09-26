@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
+using Avalonia.Automation.Peers;
 
-// A miniature framework for KeyBindingFocusRuleTests. The rule reads a framework's focus model
-// through reflection alone, so these are shaped like one: a FocusableProperty whose per-type defaults
-// are registered by static constructors, and items controls that construct their containers.
+// A miniature framework for KeyBindingFocusRuleTests and ItemContainerNameRuleTests. Both rules read a
+// framework through reflection alone, so these are shaped like one: a FocusableProperty whose
+// per-type defaults are registered by static constructors, items controls that construct their
+// containers, and containers that construct their automation peers, which are in ContainerNameFakes.cs.
 //
 // ⛔ Never instantiate these in a test. Construction runs the static constructors, and the rule has
 // to run them itself: a read made before they run reports every control unfocusable, which is the
@@ -52,7 +54,12 @@ public class InputElement
 }
 
 /// <summary>A control that cannot take focus.</summary>
-public class Control : InputElement;
+public class Control : InputElement
+{
+    /// <summary>Shaped like the framework's: a peer no control-view search reaches.</summary>
+    /// <returns>The peer.</returns>
+    protected virtual AutomationPeer OnCreateAutomationPeer() => new NoneAutomationPeer(this);
+}
 
 /// <summary>A control drawn through a template it is given.</summary>
 public class TemplatedControl : Control
@@ -75,10 +82,13 @@ public class ItemsControl : TemplatedControl
     protected virtual Control CreateContainerForItemOverride() => new ContentPresenter();
 }
 
-/// <summary>A list's row: focusable by default, once its static constructor has run.</summary>
+/// <summary>A list's row: focusable by default, once its static constructor has run, and a list item to automation.</summary>
 public class ListBoxItem : TemplatedControl
 {
     static ListBoxItem() => FocusableProperty.OverrideDefaultValue(typeof(ListBoxItem), true);
+
+    /// <inheritdoc />
+    protected override AutomationPeer OnCreateAutomationPeer() => new ListItemAutomationPeer(this);
 }
 
 /// <summary>A list: unfocusable itself, with focusable rows.</summary>
@@ -86,6 +96,16 @@ public class ListBox : ItemsControl
 {
     /// <inheritdoc />
     protected override Control CreateContainerForItemOverride() => new ListBoxItem();
+}
+
+/// <summary>A drop-down's row, which keeps its base's peer.</summary>
+public class ComboBoxItem : ListBoxItem;
+
+/// <summary>A drop-down list.</summary>
+public class ComboBox : ItemsControl
+{
+    /// <inheritdoc />
+    protected override Control CreateContainerForItemOverride() => new ComboBoxItem();
 }
 
 /// <summary>A custom list that borrows its base's theme key, as TailBlazer's <c>LinesListBox</c> does.</summary>
@@ -99,6 +119,9 @@ public class BorrowingListBox : ListBox
 public class TreeViewItem : ItemsControl
 {
     static TreeViewItem() => FocusableProperty.OverrideDefaultValue(typeof(TreeViewItem), true);
+
+    /// <inheritdoc />
+    protected override AutomationPeer OnCreateAutomationPeer() => new TreeViewItemAutomationPeer(this);
 }
 
 /// <summary>A tree: unfocusable itself, with focusable rows.</summary>
@@ -108,10 +131,13 @@ public class TreeView : ItemsControl
     protected override Control CreateContainerForItemOverride() => new TreeViewItem();
 }
 
-/// <summary>A tab.</summary>
+/// <summary>A tab, which is a list item to automation.</summary>
 public class TabItem : TemplatedControl
 {
     static TabItem() => FocusableProperty.OverrideDefaultValue(typeof(TabItem), true);
+
+    /// <inheritdoc />
+    protected override AutomationPeer OnCreateAutomationPeer() => new ListItemAutomationPeer(this);
 }
 
 /// <summary>Presents its selected item's content as well as its items.</summary>

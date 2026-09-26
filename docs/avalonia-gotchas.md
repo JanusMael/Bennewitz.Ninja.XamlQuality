@@ -382,6 +382,8 @@ Avalonia takes a generated container's automation name from the bound **item**. 
 
 > The "name comes from the item" rule applies to any `ItemsSource`-generated container — but ⛔ **the FALLBACK does not, and neither does the fix.** An application's nav `TreeViewItem`s were audited afterwards and were broken too; see the next entry. Do not assume `ToString()` is the answer for a container that is not a `TabItem`.
 
+⭐ **Checked by [`BNXQ1009`](../README.md#rules)**, which reads what names each generated row: a container style or theme, the item template's root, and last the `ToString()` of the type the template's `x:DataType` names. Measured on 12.1.3 for the rule: a `TextBlock` root with text names a tab, and so does a panel root that declares `AutomationProperties.Name`. The second holds from 12.1.2 on; before it, the framework's source reads only a `TextBlock` root's text.
+
 ---
 
 ### A `TreeViewItem` generated from `ItemsSource` has NO automation name — not from the template, not from `ToString()`
@@ -427,6 +429,8 @@ Each tree's own `Tree` element was already named `Settings navigation` in both a
 
 ⛔ **`AxamlAccessibilityCoverageTests` scored both files clean, and a baseline of zero was quoted as evidence.** Guarded instead by `ItemsSourceBoundTreeViewsTests`, which requires every `ItemsSource`-bound `TreeView` to declare a container-naming `Style` — no exceptions, for the reason above. Canaried in both directions and per-file: dropping either app's style reds only that app, dropping both names both, and a *scoped* `TreeView > TreeViewItem` selector is still accepted (the `>` inside the attribute value breaks a naive tag regex — the guard skips quoted strings).
 
+⭐ **Checked by [`BNXQ1009`](../README.md#rules)**: a `TreeView` generated from `ItemsSource` is reported, whatever its template shows, unless its `ItemContainerTheme` or a `Style` for `TreeViewItem` that reaches it sets `AutomationProperties.Name`. Measured on 12.1.3 for the rule: either way names the nested levels too.
+
 ---
 
 ### A `ListBox` bound to `ItemsSource` announces the item's type name for every row
@@ -449,6 +453,8 @@ Third container type, same rule, and **all four `ItemsSource`-bound ListBoxes ac
 ⭐ **Put in the announcement whatever the row conveys visually and only visually.** Each fix above carries a count, a transport, a key summary, or a severity, because those are rendered beside the label and a reader gets none of them otherwise. A row whose dot says "Critical" is the clearest case: the dot's own `HelpText` is on an inner `TextBlock`, and a reader announcing the **container** does not necessarily read a child's help text.
 
 ⚠ **An `ItemsControl` is not in this class and is deliberately not scanned.** It generates non-focusable `ContentPresenter`s, so the announced name comes from the focusable control inside the template. One app's search popup is an `ItemsControl` of `Button`s carrying an explicit `AutomationProperties.Name`, which is why the *same view-model* was broken in one app and correct in the other — a per-app difference no view-model test can see.
+
+⭐ **Checked by [`BNXQ1009`](../README.md#rules)**, for a `ListBoxItem` and a `ComboBoxItem` as for a `TabItem`. ⚠ A `Style` whose selector is `ListBoxItem` alone does not reach a `ComboBoxItem`, although one derives from the other, because a type selector matches exactly: write `:is(ListBoxItem)` or `ComboBoxItem`. Measured on 12.1.3.
 
 ---
 

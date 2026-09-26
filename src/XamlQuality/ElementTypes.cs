@@ -149,6 +149,34 @@ internal sealed class ElementTypes
     }
 
     /// <summary>
+    /// The type called <paramref name="name"/> in the CLR namespace <paramref name="clrNamespace"/>: from
+    /// the supplied assemblies first, then what they reference, then the core library; <c>null</c> when
+    /// none has one, or more than one assembly at the same level does.
+    /// </summary>
+    /// <remarks>
+    /// ⚠ <b>By namespace as well as name</b>, because an <c>x:DataType</c> names its type through the
+    /// <c>xmlns</c> that says which namespace it is in, and a consumer's <c>Person</c> is not another
+    /// library's. <c>System</c>'s types are reached through facades that forward them rather than
+    /// define them, so the core library is asked last.
+    /// </remarks>
+    internal Type? TypeNamed(string clrNamespace, string name)
+    {
+        foreach (Dictionary<string, List<Type>> index in (Dictionary<string, List<Type>>[])[_supplied, _referenced])
+        {
+            if (index.TryGetValue(name, out List<Type>? types))
+            {
+                Type[] matching = [.. types.Distinct().Where(type => Safely(() => type.Namespace == clrNamespace, false))];
+                if (matching.Length > 0)
+                {
+                    return matching.Length == 1 ? matching[0] : null;
+                }
+            }
+        }
+
+        return Safely(() => typeof(object).Assembly.GetType(clrNamespace + "." + name), (Type?)null);
+    }
+
+    /// <summary>
     /// The type a control's implicit theme is keyed by: the one its most-derived <c>StyleKeyOverride</c>
     /// returns with a <c>typeof</c>, else the control's own type.
     /// </summary>
