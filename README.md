@@ -146,11 +146,12 @@ whose peer method could not be read, a name more than one scanned type carries, 
 `OnCreateAutomationPeer` at all, and, when the scan was given no assemblies, every themed control.
 For `BNXQ1008` it is a control that nothing hides, in slots whose size depends on a value markup
 cannot evaluate, such as the bound width of a collapsing pane. For `BNXQ1009` it is a list whose
-rows markup does not name: one with no item template, or one whose template declares no
-`x:DataType`; an item type that is abstract, an interface or a control, or has a subclass that
-writes its own `ToString()`; a template root that names the row through a peer of its own; a style
-that names the rows only in some state or some places, or from another view; and, when the scan
-was given no assemblies, every `ItemsSource`. None is a violation, and some are correct; all are
+rows markup does not name: one with no item template, or one whose template's `x:DataType` is
+missing or names a type the scan does not hold; an item type that is abstract, an interface or a
+control, or has a subclass that writes its own `ToString()`; a template root that names the row
+through a peer of its own, and a row whose own peer names it; a style that names the rows only in
+some state or some places, or from another view, and one that sets the list's template or the rows'
+theme; and, when the scan was given no assemblies, every `ItemsSource`. None is a violation, and some are correct; all are
 places where a clean result is not what it seems.
 
 ## Versioning
