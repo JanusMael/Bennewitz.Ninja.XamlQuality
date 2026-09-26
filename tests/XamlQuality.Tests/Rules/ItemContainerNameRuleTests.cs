@@ -9,10 +9,14 @@ namespace XamlQuality.Tests.Rules;
 /// </summary>
 /// <remarks>
 /// ⭐ <b>What names a row was measured on Avalonia 12.1.3 first</b>, in a headless window under
-/// Fluent, by asking each generated container's automation peer for its name: every item and
-/// template shape here, the selectors, and both kinds of tree naming. The fakes reproduce the
-/// framework's shape, not its behaviour, so what these tests prove is the rule's reading of markup
-/// and types; the measurements are what say that reading matches the framework.
+/// Fluent, by asking each generated container's automation peer for its name: each container's
+/// fallback, each shape of template root, <c>DisplayMemberBinding</c>, a class, record, struct, enum,
+/// string and subclass as the item, a type selector against <c>:is()</c>, a state and a context
+/// selector, and both ways of naming a tree. The rest, such as a blank name, a record struct, a class
+/// selector, or a style or theme placed elsewhere, follows from the framework's source or from how
+/// markup is read. The fakes reproduce the framework's shape, not its behaviour, so what these tests
+/// prove is the rule's reading of markup and types; the measurements are what say that reading
+/// matches the framework.
 /// </remarks>
 public sealed class ItemContainerNameRuleTests : IDisposable
 {
