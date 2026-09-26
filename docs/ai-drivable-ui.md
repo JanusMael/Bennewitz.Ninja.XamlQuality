@@ -74,6 +74,7 @@ Windows UI Automation.
 6. **What is not on screen is not in the tree.** A collapsed pane, a shut drawer, a zero-width
    column: hide it (`IsVisible=false` / `Visibility.Collapsed`), do not merely shrink or clip it.
    Clipping stops the paint and changes neither the layout bounds nor the automation tree.
+   XamlQuality's `BNXQ1008` checks this for a control in a `Grid` row or column of no size.
    **Custom-drawn is not a proxy for decorative.** Whether something is a control element depends
    on whether a person can act on it. In a control library the custom-drawn surfaces are often the
    interactive ones — that is why they were custom-drawn — and hiding them as decoration removes
