@@ -45,8 +45,8 @@ moves its pin past `2026.3.924` renames them in its test names, messages and com
   style guide's section 14 points here since JanusMael/ClaudeForge#87. bb-skills' drivable-ui skill
   points at the guide here and keeps no copy (`addad02`, on a local branch). Moving either file, or
   retitling a section or entry someone cites, means telling them.
-- **OpenForge2k's tests**, jmui's `ClaudeForge.Tests`, pin `2026.3.924` on `main`, test-only, since
-  JanusMael/ClaudeForge#77 merged on 2026-09-24, and so have the stricter XQ1001. They use
+- **OpenForge2k's tests**, jmui's `ClaudeForge.Tests`, pin `2026.3.925` on `main`, test-only, since
+  JanusMael/ClaudeForge#91 merged on 2026-09-25, and run BNXQ1001 alone. They use
   `XamlScanContext.Load`, `ExpanderAutomationNameRule`, and `XamlRuleResult.Inspected` /
   `.Findings`.
 - **Templates' `bbavalonia` template** pins `2026.3.925` for the apps it generates, test-only, since
@@ -80,7 +80,7 @@ and `BNXQ1009`, the `ToString()` containers. One candidate has come in since.
 
 | Candidate | Source | Fit | What it checks | What it needs |
 |---|---|---|---|---|
-| A row that takes no click where it draws nothing | `avalonia-gotchas.md`, the entry on a row whose `Background` is null | Under investigation | A row with nothing drawn across it: a literal `{x:Null}` background, a custom `ListBoxItem` theme or template that draws none, or a bound background that can answer null | Measuring first, as the developer asked on 2026-09-28, because the defect cost time where it arose. A rule on the literal alone would read as covering the converter case, the one that arose, which markup cannot evaluate. The shape to measure is a theme or template that leaves the row's background unset, which markup can see, and whether a binding with a non-null `TargetNullValue` can be told apart from one without |
+| A row that takes no click where it draws nothing | `avalonia-gotchas.md`, the entry on a row whose `Background` is null | Measured; the shape waits on the developer | A generated row that draws nothing across its width: a style or container theme setting `Background` to `{x:Null}`, a container theme not `BasedOn` another that sets no `Background`, a container template whose root draws no background, or a bound `Background` with no non-null `TargetNullValue` | Measured on Avalonia 12.1.3 under Fluent, Simple and Semi 12.1.0.1, by a click at a `ListBoxItem`'s centre, its markup loaded through the runtime XAML loader. Each of the first three leaves the click unanswered, the third even when the row's `Background` is `Transparent`, and so does a binding to a null source or through a converter answering null. `TargetNullValue` rescued both of those, and `FallbackValue` neither. Stock rows are `Transparent` in all three themes, and a theme `BasedOn` the framework's keeps that. The open questions are below |
 
 **Not a fit:** the guide's rule 10, keeping popups in the window's tree. Avalonia's `OverlayPopups` is
 set in C# at startup, where no markup scan can see it. That check belongs in the application, as a
@@ -88,7 +88,11 @@ startup assertion or a headless test.
 
 ## Questions for the developer
 
-None open.
+- **The row-background rule's shape.** Is a bound row `Background` with no non-null
+  `TargetNullValue`, the converter case that arose, reported, since markup can decide it and the fix
+  is one attribute, or named in `Skipped`, since markup cannot see whether the binding ever answers
+  null? And does the rule cover only `ListBoxItem`, the container measured, until `ComboBoxItem`,
+  `TabItem` and `TreeViewItem` are measured? Recommended: report it, and `ListBoxItem` first.
 
 ## Follow-ups
 
