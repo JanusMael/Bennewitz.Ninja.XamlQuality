@@ -18,7 +18,9 @@ working documents are left out. A change that makes a rule stricter or adds API 
 effect on a consumer, so the release that carries it can say so. `main` takes squash and rebase
 merges only, and both give a branch's commits new hashes, so a row cites its pull request.
 
-Nothing yet.
+| Commit or PR | Change | Effect on a consumer |
+|---|---|---|
+| PR #43 | `docs/avalonia-gotchas.md` gains an AvaloniaEdit entry from DiffView's session: a zero-length element that a host's generator places at a line start is lost where a built-in generator claims the line's first character, because `TextView`'s constructor appends the built-ins first and the first element with a length ends a round of construction. Checked in AvaloniaEdit's source at the `12.0.0` tag, and measured headless on Avalonia.AvaloniaEdit 12.0.0 with Avalonia 12.1.3. The cause held as sent, and the loss is wider: under the default options, lines beginning with a URL or an e-mail address lose the element too | Docs only |
 
 ## Consumers inside the family
 
