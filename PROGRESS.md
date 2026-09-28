@@ -80,7 +80,7 @@ and `BNXQ1009`, the `ToString()` containers. One candidate has come in since.
 
 | Candidate | Source | Fit | What it checks | What it needs |
 |---|---|---|---|---|
-| A row that takes no click where it draws nothing | `avalonia-gotchas.md`, the entry on a row whose `Background` is null | Measured; the shape waits on the developer | A generated row that draws nothing across its width: a style or container theme setting `Background` to `{x:Null}`, a container theme not `BasedOn` another that sets no `Background`, a container template whose root draws no background, or a bound `Background` with no non-null `TargetNullValue` | Measured on Avalonia 12.1.3 under Fluent, Simple and Semi 12.1.0.1, by a click at a `ListBoxItem`'s centre, its markup loaded through the runtime XAML loader. Each of the first three leaves the click unanswered, the third even when the row's `Background` is `Transparent`, and so does a binding to a null source or through a converter answering null. `TargetNullValue` rescued both of those, and `FallbackValue` neither. Stock rows are `Transparent` in all three themes, and a theme `BasedOn` the framework's keeps that. The open questions are below |
+| A row that takes no click where it draws nothing | `avalonia-gotchas.md`, the entry on a row whose `Background` is null | Measured; its shape decided on 2026-09-28, but for `TreeViewItem` | A `ListBoxItem`, `ComboBoxItem` or `TabItem` that draws nothing across its width: a style or container theme setting `Background` to `{x:Null}`, a container theme not `BasedOn` another that sets no `Background`, a container template whose root draws no background, or, by the developer's decision, a bound `Background` with no non-null `TargetNullValue` | Measured on Avalonia 12.1.3 under Fluent, Simple and Semi 12.1.0.1, by a click where only a row's background can be hit. On a `ListBoxItem`, its markup loaded through the runtime XAML loader, each of the first three leaves the click unanswered, the third even when the row's `Background` is `Transparent`, and so does a binding to a null source or through a converter answering null. `TargetNullValue` rescued both of those, and `FallbackValue` neither. `ComboBoxItem` and `TabItem` are `Transparent` stock and miss the click with a null background, as `ListBoxItem` does, in all three themes. `TreeViewItem` does not follow them: Fluent's and Simple's templates give its header presenter a `Transparent` background of its own, by their source at 12.1.3, so a null row background still takes the click there, while under Semi it misses. The open question is below |
 
 **Not a fit:** the guide's rule 10, keeping popups in the window's tree. Avalonia's `OverlayPopups` is
 set in C# at startup, where no markup scan can see it. That check belongs in the application, as a
@@ -88,11 +88,9 @@ startup assertion or a headless test.
 
 ## Questions for the developer
 
-- **The row-background rule's shape.** Is a bound row `Background` with no non-null
-  `TargetNullValue`, the converter case that arose, reported, since markup can decide it and the fix
-  is one attribute, or named in `Skipped`, since markup cannot see whether the binding ever answers
-  null? And does the rule cover only `ListBoxItem`, the container measured, until `ComboBoxItem`,
-  `TabItem` and `TreeViewItem` are measured? Recommended: report it, and `ListBoxItem` first.
+- **Does the row-background rule leave `TreeViewItem` out?** Whether a null row background loses
+  the click depends on the theme's template: it does under Semi, and not under Fluent or Simple.
+  Recommended: leave it out, and say so in the rule's remarks.
 
 ## Follow-ups
 
