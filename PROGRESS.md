@@ -79,7 +79,11 @@ when a rule is written.
 
 The rules were written in the order decided on 2026-09-23, and all of them are now: `BNXQ1005`,
 `BNXQ1006`, the peer check, `BNXQ1007`, the explicit `AutomationId`, `BNXQ1008`, the zero-size slot,
-and `BNXQ1009`, the `ToString()` containers. No candidate is open.
+and `BNXQ1009`, the `ToString()` containers. One candidate has come in since.
+
+| Candidate | Source | Fit | What it checks | What it needs |
+|---|---|---|---|---|
+| A row whose `Background` is a literal `{x:Null}` | `avalonia-gotchas.md`, the entry on a row whose `Background` is null | Partial | A `ListBoxItem` style, theme setter or attribute that sets `Background` to `{x:Null}`, so the row takes no click where it draws nothing | Markup only. A converter answering null, the way the entry's case arose, is not decidable from markup, so a rule would catch the literal alone |
 
 **Not a fit:** the guide's rule 10, keeping popups in the window's tree. Avalonia's `OverlayPopups` is
 set in C# at startup, where no markup scan can see it. That check belongs in the application, as a

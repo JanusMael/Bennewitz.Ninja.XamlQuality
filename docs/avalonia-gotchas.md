@@ -618,6 +618,26 @@ Measured the same way as the entry above.
 
 Measured the same way as the two entries above.
 
+### A row whose `Background` is null takes no click where it draws nothing
+
+**Symptom:** A click on a row away from its text selects nothing, and the row shows no hover there, while a click on the text works. A fixture that clicks near a row's left edge, over its text, never sees it.
+
+**Cause:** A control is hit-tested where it draws, and a null `Background` draws nothing. The Fluent `ListBoxItem` theme sets a `Transparent` background, which draws, so the whole row takes the pointer. A row theme or style that sets `Background` to null, as a converter answering null for "no highlight" does, leaves only the content hit-testable, and a click beside it goes to what lies behind. With `Background` null, the centre of a 300 × 40 row hit-tested to `ScrollContentPresenter < Grid < ScrollViewer < Border < ListBox`: a move there left `IsPointerOver` false, a click there selected nothing, and a click over the text selected the row. With the theme's default or `Transparent`, the centre hit the row's `ContentPresenter`, and a click there selected it. It is not particular to rows: a press below the one line of a stretched `SelectableTextBlock`, which has no background either, did not reach it.
+
+**Fix:** Answer `Transparent` where null would mean "no highlight", for instance with `TargetNullValue={x:Static Brushes.Transparent}` on the binding. It paints the same over the list.
+
+Measured on Avalonia 12.1.3, headless with Skia and the Fluent theme, with pointer input raised through `HeadlessWindowExtensions` and the target read with `InputHitTest`.
+
+### A tunnelling `PageDown` handler that scrolls a page, left unhandled, moves two pages
+
+**Symptom:** One PageDown moves a list two pages, so every other page is skipped.
+
+**Cause:** A handler that scrolls a list by a page from the tunnelling `KeyDown`, and does not mark the key handled, lets it go on to the list's own handling, which pages again. In a stock `ListBox` that is the `ScrollViewer` in its template, whose `OnKeyDown` pages on `PageUp` and `PageDown`. One PageDown moved one 270-pixel viewport with no handler, two with the handler, and one again once the handler set `Handled`, while focus stayed on the first row each time. `ListBox.OnKeyDown` also offers the key to its panel's navigation. The stock `VirtualizingStackPanel` answers nothing for a page, by its source, but a custom panel that answers by moving focus a page on was seen to page a second time the same way, by scrolling that row into view.
+
+**Fix:** Set `Handled` for `PageUp` and `PageDown` in the handler that scrolls by a page. Leave the keys it does not handle to the list.
+
+Measured on Avalonia 12.1.3, headless with Skia and the Fluent theme: a `ListBox` of 400 strings, 270 pixels tall, with its first row focused and the key pressed through `KeyPressQwerty`.
+
 ### `AvaloniaProperty` metadata reads its BASE default until the type's static constructor has run
 
 **Symptom:** A reflection sweep reports `Focusable` defaults to `false` for every control — `Button`, `TextBox`, `ComboBox`, `MenuItem`, all of them — which would mean nothing in Avalonia is focusable.
@@ -1077,6 +1097,24 @@ Two that go with it:
 
 - ⛔ **The command under a `KeyBinding` is asked `CanExecute` BEFORE it is invoked.** A fake command answering `false` records nothing, however perfectly the chord is bound — so the test passes its own setup and proves nothing.
 - ⚠ **Assert the MODIFIER, not just the key.** A gesture written `"C"` instead of `"Ctrl+C"` parses, builds and binds. The negative case is the one worth writing.
+
+### A headless drag is a hover unless each move carries the button
+
+**Symptom:** A fixture drags across a `SelectableTextBlock` with `MouseDown`, `MouseMove` and `MouseUp`, and nothing is selected.
+
+**Cause:** `HeadlessWindowExtensions.MouseMove` takes the buttons held from its `modifiers`, which default to none. A move without `RawInputModifiers.LeftMouseButton` is a hover, even between a `MouseDown` and a `MouseUp`, and `SelectableTextBlock` extends its selection only while the left button reads pressed. A press at the start of "Hello headless world" and a move to its end selected nothing without the modifier, and the whole string with it.
+
+**Fix:** Pass the held button in every move of a drag.
+
+```csharp
+window.MouseDown(start, MouseButton.Left);
+window.MouseMove(end, RawInputModifiers.LeftMouseButton);
+window.MouseUp(end, MouseButton.Left);
+```
+
+⚠ Press where the control draws. A press below the one line of a stretched `SelectableTextBlock` does not reach it, for the reason in the entry on a row whose `Background` is null.
+
+Measured on Avalonia 12.1.3, headless with Skia and the Fluent theme.
 
 ---
 
