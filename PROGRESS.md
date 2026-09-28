@@ -9,7 +9,7 @@ released, who depends on what, and the rule backlog with any questions open for 
 |---|---|
 | Published | `2026.3.925`: `Bennewitz.Ninja.XamlQuality` and `Bennewitz.Ninja.XamlQuality.ThemeAudit`, released 2026-09-25. What it changed for a consumer, with the old and new rule ids, is in its [release notes](https://github.com/JanusMael/Bennewitz.Ninja.XamlQuality/releases/tag/v2026.3.925) |
 | `main` | carries what the next section lists, not yet released |
-| Next release | Not scheduled; the developer decides. One release per calendar day |
+| Next release | Decided by the developer on 2026-09-28: release what `main` carries, as the version of the day it is tagged, `2026.3.928` that day. The notes wait for the developer's approval of their text. One release per calendar day |
 
 ### On `main`, not yet released
 
@@ -83,7 +83,7 @@ and `BNXQ1009`, the `ToString()` containers. One candidate has come in since.
 
 | Candidate | Source | Fit | What it checks | What it needs |
 |---|---|---|---|---|
-| A row whose `Background` is a literal `{x:Null}` | `avalonia-gotchas.md`, the entry on a row whose `Background` is null | Partial | A `ListBoxItem` style, theme setter or attribute that sets `Background` to `{x:Null}`, so the row takes no click where it draws nothing | Markup only. A converter answering null, the way the entry's case arose, is not decidable from markup, so a rule would catch the literal alone |
+| A row that takes no click where it draws nothing | `avalonia-gotchas.md`, the entry on a row whose `Background` is null | Under investigation | A row with nothing drawn across it: a literal `{x:Null}` background, a custom `ListBoxItem` theme or template that draws none, or a bound background that can answer null | Measuring first, as the developer asked on 2026-09-28, because the defect cost time where it arose. A rule on the literal alone would read as covering the converter case, the one that arose, which markup cannot evaluate. The shape to measure is a theme or template that leaves the row's background unset, which markup can see, and whether a binding with a non-null `TargetNullValue` can be told apart from one without |
 
 **Not a fit:** the guide's rule 10, keeping popups in the window's tree. Avalonia's `OverlayPopups` is
 set in C# at startup, where no markup scan can see it. That check belongs in the application, as a
@@ -112,9 +112,17 @@ None open.
     MinHeight="20"` is arranged 20 tall, a `MaxHeight` of 0 empties any row, and `0*` gets nothing.
     `GridLayout.SlotBounds` already carries them, so the change is `BNXQ1004` measuring against
     them too.
+- **Trimming is being made a family policy, with Templates.** The developer's model, 2026-09-28: a
+  repository that trims sets `IsTrimmable` and `EnableTrimAnalyzer`; a family library it depends on
+  must then be trimmable too; with neither property set, nothing is enforced. Today the shared
+  conventions checker, copied here from Templates and never edited here, notes every library
+  without them. XamlQuality is used only from test projects, so it owes nothing under the policy,
+  and the note goes when the agreed change copies back. The two sides are being split between this
+  repository's session and Templates'.
 - **`BNXQ1009` reads an item type only from an item template's `x:DataType`.** A list with no item
   template, or a template that declares none, is named in `Skipped`, as all 6 of ClaudeForge's skips
   are. Reading the type from the `ItemsSource` binding's path, through the view's own `x:DataType`,
-  would decide most of them. It can add findings, so it is a change of its own.
+  would decide most of them. It can add findings, so it is a change of its own. It is next, by the
+  developer's decision of 2026-09-28, after the release and the row-background investigation.
 - **`BNXQ1009` checks Avalonia's rows only.** WPF's `ListBoxItem` is named through a different peer,
   whose fallback was not measured. Measuring it is what would let the rule check WPF markup.
