@@ -69,7 +69,7 @@ public sealed class AssemblyQualityTests
         AssemblyRuleResult result = new CancellationTokenRule().Analyze(AssemblyScanContext.Of(Shipped));
 
         Assert.Empty(result.Findings);
-        Assert.Empty(result.Skipped);
+        AssertNothingSkipped(result.Skipped);
 
         // ⓘ Zero inspected is the truth here rather than a scan that missed: the rules and the audit
         // are synchronous, so nothing public takes a token at all. It is asserted so that the first
@@ -85,7 +85,7 @@ public sealed class AssemblyQualityTests
         AssemblyRuleResult result = new SurfaceLeakRule().Analyze(AssemblyScanContext.Of(Shipped));
 
         Assert.Empty(result.Findings);
-        Assert.Empty(result.Skipped);
+        AssertNothingSkipped(result.Skipped);
 
         // ⓘ BNAQ1002 counts only where a leak is possible: an assembly whose references export no
         // leak-prone namespace contributes nothing. The library references System.Text.Json, which
@@ -115,9 +115,9 @@ public sealed class AssemblyQualityTests
 
         Assert.Empty(findings);
 
-        // ⓘ Forward cover: BNAQ1003 reads references by name and loads none, so at 2026.3.925 it
+        // ⓘ Forward cover: BNAQ1003 reads references by name and loads none, so at 2026.3.928 it
         // never skips. This holds the line if a later version starts to.
-        Assert.Empty(skipped);
+        AssertNothingSkipped(skipped);
     }
 
     [Fact]
@@ -128,9 +128,20 @@ public sealed class AssemblyQualityTests
         AssemblyRuleResult result = NamespaceShadowRule.IncludingInternalTypes().Analyze(AssemblyScanContext.Of(Shipped));
 
         Assert.Empty(result.Findings);
-        Assert.Empty(result.Skipped);
+        AssertNothingSkipped(result.Skipped);
         Assert.True(result.Inspected > 0, "BNAQ1004 inspected no namespaces, so it proved nothing.");
     }
+
+    /// <summary>Asserts that a rule skipped nothing, with every entry whole in the message.</summary>
+    /// <remarks>
+    /// ⚠ <b>Not <c>Assert.Empty</c>, which shortens each string it prints.</b> With
+    /// <c>System.CommandLine.dll</c> taken out of the test output, it printed
+    /// <c>"ThemeAudit: reference System.CommandLine 2.0.0.0 w"···</c>, cut off before the part that
+    /// says what would not load and why.
+    /// </remarks>
+    private static void AssertNothingSkipped(IReadOnlyCollection<string> skipped) =>
+        Assert.True(skipped.Count == 0, $"{skipped.Count} skipped, so the clean result is incomplete:"
+            + Environment.NewLine + string.Join(Environment.NewLine, skipped));
 
     private static string[] ForbiddenFor(string assemblyName)
     {
