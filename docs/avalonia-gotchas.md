@@ -746,6 +746,16 @@ AddHandler(KeyDownEvent, (_, e) =>
 }, RoutingStrategies.Tunnel);
 ```
 
+### AvaloniaEdit asks its built-in generators first, so a zero-length element at a line start is lost where one of them claims the first character
+
+**Symptom:** A zero-length element that an element generator places at the start of each line, such as padding drawn as virtual rows, is missing from some lines. Under the default options it is missing where a line begins with a control character such as a form feed, or with a URL or an e-mail address, and once `ShowSpaces` or `ShowTabs` is on, also where a line begins with a space or a tab. Lines that begin with a letter, and empty lines, keep it, so it looks intermittent.
+
+**Cause:** `TextView`'s constructor sets `Options`, which appends the built-in generators to `ElementGenerators`: `SingleCharacterElementGenerator`, because `ShowBoxForControlCharacters` defaults to true, and the two hyperlink generators, because `EnableHyperlinks` and `EnableEmailHyperlinks` do too. A generator the host adds with `Add` sits behind them. `VisualLine.PerformVisualElementConstruction` asks the generators in list order at each offset, and the first element with a `DocumentLength` above 0 ends the round. `SingleCharacterElementGenerator` claims a space while `ShowSpaces` is on, a tab while `ShowTabs` is on, and any other character that `char.IsControl` accepts while `ShowBoxForControlCharacters` is on, each with an element one character long, and the hyperlink generators claim a link's text. So where a line begins with one of those, the round ends before the host's generator is asked, and the next round starts one character on, where a generator that answers only at the line start has nothing to add. A zero-length element from a generator earlier in the list survives, because it does not end the round.
+
+**Fix:** Insert the generator at the front: `textView.ElementGenerators.Insert(0, generator)`. An element of no length displaces nothing there, and a built-in generator that a change of options removes and adds again is appended behind it.
+
+Measured on Avalonia.AvaloniaEdit 12.0.0 with Avalonia 12.1.3, headless with Skia, by reading each line's `VisualLine.Elements`. With the host's generator added, the element was lost on lines beginning with a form feed, a URL or an e-mail address under the default options, and on lines beginning with a space or a tab as well once `ShowSpaces` and `ShowTabs` were on. Inserted at 0, it was kept on every line, and still was after the built-in generator had been removed and added again. The constructor and the loop were read in AvaloniaEdit's source at the `12.0.0` tag.
+
 ## Virtualization / perf
 
 ### Virtualization needs a BOUNDED viewport — and it does not reach into a nested items host
