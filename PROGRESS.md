@@ -82,7 +82,7 @@ and `BNXQ1009`, the `ToString()` containers. One candidate has come in since.
 
 | Candidate | Source | Fit | What it checks | What it needs |
 |---|---|---|---|---|
-| A row that takes no click where it draws nothing | `avalonia-gotchas.md`, the entry on a row whose `Background` is null | Measured; its shape decided on 2026-09-28, but for `TreeViewItem` | A `ListBoxItem`, `ComboBoxItem` or `TabItem` that draws nothing across its width: a style or container theme setting `Background` to `{x:Null}`, a container theme not `BasedOn` another that sets no `Background`, a container template whose root draws no background, or, by the developer's decision, a bound `Background` with no non-null `TargetNullValue` | Measured on Avalonia 12.1.3 under Fluent, Simple and Semi 12.1.0.1, by a click where only a row's background can be hit. On a `ListBoxItem`, its markup loaded through the runtime XAML loader, each of the first three leaves the click unanswered, the third even when the row's `Background` is `Transparent`, and so does a binding to a null source or through a converter answering null. `TargetNullValue` rescued both of those, and `FallbackValue` neither. `ComboBoxItem` and `TabItem` are `Transparent` stock and miss the click with a null background, as `ListBoxItem` does, in all three themes. `TreeViewItem` does not follow them: Fluent's and Simple's templates give its header presenter a `Transparent` background of its own, by their source at 12.1.3, so a null row background still takes the click there, while under Semi it misses. The open question is below |
+| A row that takes no click where it draws nothing | `avalonia-gotchas.md`, the entry on a row whose `Background` is null | Measured, and its shape decided; the next rule written, by the developer's decision of 2026-09-28 | A `ListBoxItem`, `ComboBoxItem` or `TabItem` that draws nothing across its width: a style or container theme setting `Background` to `{x:Null}`, a container theme not `BasedOn` another that sets no `Background`, a container template whose root draws no background, or, by the developer's decision, a bound `Background` with no non-null `TargetNullValue` | Measured on Avalonia 12.1.3 under Fluent, Simple and Semi 12.1.0.1, by a click where only a row's background can be hit. On a `ListBoxItem`, its markup loaded through the runtime XAML loader, each of the first three leaves the click unanswered, the third even when the row's `Background` is `Transparent`, and so does a binding to a null source or through a converter answering null. `TargetNullValue` rescued both of those, and `FallbackValue` neither. `ComboBoxItem` and `TabItem` are `Transparent` stock and miss the click with a null background, as `ListBoxItem` does, in all three themes. `TreeViewItem` does not follow them: Fluent's and Simple's templates give its header presenter a `Transparent` background of its own, by their source at 12.1.3, so a null row background still takes the click there, while under Semi it misses. Markup cannot show which theme's template applies, so `TreeViewItem` is left out, by the developer's decision of 2026-09-28, and the rule's remarks say why |
 
 **Not a fit:** the guide's rule 10, keeping popups in the window's tree. Avalonia's `OverlayPopups` is
 set in C# at startup, where no markup scan can see it. That check belongs in the application, as a
@@ -90,9 +90,7 @@ startup assertion or a headless test.
 
 ## Questions for the developer
 
-- **Does the row-background rule leave `TreeViewItem` out?** Whether a null row background loses
-  the click depends on the theme's template: it does under Semi, and not under Fluent or Simple.
-  Recommended: leave it out, and say so in the rule's remarks.
+None open.
 
 ## Follow-ups
 
@@ -118,12 +116,16 @@ startup assertion or a headless test.
   must then be trimmable too; with neither property set, nothing is enforced. Today the shared
   conventions checker, copied here from Templates and never edited here, notes every library
   without them. XamlQuality is used only from test projects, so it owes nothing under the policy,
-  and the note goes when the agreed change copies back. The two sides are being split between this
-  repository's session and Templates'.
+  and the note goes when the agreed change copies back. The developer confirmed the split on
+  2026-09-29. Templates enforces a repository's own libraries in the checker. This repository's
+  session writes the other side: when a repository trims, every `Bennewitz.Ninja.*` package in its
+  restore graph, transitive ones included, carries `IsTrimmable` metadata, read from
+  `project.assets.json` without loading anything. Templates lands it in a plan of its own after its
+  `00006`, which also decides whether `"trimming": "required"` stays.
 - **`BNXQ1009` reads an item type only from an item template's `x:DataType`.** A list with no item
   template, or a template that declares none, is named in `Skipped`, as all 6 of ClaudeForge's skips
   are. Reading the type from the `ItemsSource` binding's path, through the view's own `x:DataType`,
-  would decide most of them. It can add findings, so it is a change of its own. It is next, by the
-  developer's decision of 2026-09-28, after the row-background investigation.
+  would decide most of them. It can add findings, so it is a change of its own. By the developer's
+  decision of 2026-09-28, it follows the row-background rule.
 - **`BNXQ1009` checks Avalonia's rows only.** WPF's `ListBoxItem` is named through a different peer,
   whose fallback was not measured. Measuring it is what would let the rule check WPF markup.
