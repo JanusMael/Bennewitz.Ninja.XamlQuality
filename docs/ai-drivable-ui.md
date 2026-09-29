@@ -17,6 +17,23 @@ lesson, or a correction, to the session working in that repository by message (i
 an issue there instead. A claim is checked before it lands, and the sender hears the outcome. Keep no
 copy elsewhere; cite this file by path or URL.
 
+⭐ **An agent can load this method as a skill.** This repository serves it as a Claude Code plugin,
+`drivable-ui`, which condenses this guide and sends its reader here. Add the repository as a
+marketplace once and install the plugin, from a shell or with `/plugin` in a session:
+
+```bash
+claude plugin marketplace add JanusMael/Bennewitz.Ninja.XamlQuality
+claude plugin install drivable-ui@xamlquality
+```
+
+A marketplace added this way does not update on its own unless its auto-update is turned on under
+`/plugin`. To bring a changed skill to the next session:
+
+```bash
+claude plugin marketplace update xamlquality
+claude plugin update drivable-ui@xamlquality
+```
+
 ---
 
 ## 1. The stance: fix the application, not the harness
