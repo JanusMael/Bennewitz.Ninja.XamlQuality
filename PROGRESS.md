@@ -8,8 +8,9 @@ released, who depends on what, and the rule backlog with any questions open for 
 | | |
 |---|---|
 | Published | `2026.3.928`: `Bennewitz.Ninja.XamlQuality` and `Bennewitz.Ninja.XamlQuality.ThemeAudit`, released 2026-09-28. What it changed for a consumer is in its [release notes](https://github.com/JanusMael/Bennewitz.Ninja.XamlQuality/releases/tag/v2026.3.928) |
-| `main` | carries nothing unreleased |
+| `main` | carries docs-only changes, listed below; nothing that changes a package |
 | Next release | Not scheduled; the developer decides. One release per calendar day |
+| Agent skill | `drivable-ui`, served from `main` as a Claude Code plugin since PR #47, by the developer's decision of 2026-09-29: `claude plugin marketplace add JanusMael/Bennewitz.Ninja.XamlQuality`, then `claude plugin install drivable-ui@xamlquality`. It is in neither package, so it ships on merge, not on a tag |
 
 ### On `main`, not yet released
 
@@ -21,6 +22,7 @@ merges only, and both give a branch's commits new hashes, so a row cites its pul
 | Commit or PR | Change | Effect on a consumer |
 |---|---|---|
 | PR #43 | `docs/avalonia-gotchas.md` gains an AvaloniaEdit entry from DiffView's session: a zero-length element that a host's generator places at a line start is lost where a built-in generator claims the line's first character, because `TextView`'s constructor appends the built-ins first and the first element with a length ends a round of construction. Checked in AvaloniaEdit's source at the `12.0.0` tag, and measured headless on Avalonia.AvaloniaEdit 12.0.0 with Avalonia 12.1.3. The cause held as sent, and the loss is wider: under the default options, lines beginning with a URL or an e-mail address lose the element too | Docs only |
+| PR #47 | `docs/ai-drivable-ui.md` says how an agent loads the method as a skill: this repository now serves the `drivable-ui` skill, moved from bb-skills, as a Claude Code plugin from `main` | Docs only. The plugin is in neither package; it reaches a machine through `claude plugin marketplace add JanusMael/Bennewitz.Ninja.XamlQuality`, then `claude plugin install drivable-ui@xamlquality` |
 
 ## Consumers inside the family
 
@@ -43,9 +45,10 @@ moves its pin past `2026.3.924` renames them in its test names, messages and com
   2026-09-24. TailBlazer retired its copy of the guide (`8e46a8f`) and points its `CLAUDE.md` at both
   documents here. Templates' `PROGRESS.md` links the gotchas. ClaudeForge retired its pre-move
   `docs/AVALONIA-GOTCHAS.md` and repointed its links here in JanusMael/ClaudeForge#80, and its UI
-  style guide's section 14 points here since JanusMael/ClaudeForge#87. bb-skills' drivable-ui skill
-  points at the guide here and keeps no copy (`addad02`, on a local branch). Moving either file, or
-  retitling a section or entry someone cites, means telling them.
+  style guide's section 14 points here since JanusMael/ClaudeForge#87. The drivable-ui skill, which
+  condenses the guide, lives here too since PR #47, moved from bb-skills, whose `feat/drivable-ui`
+  branch the same decision retires once that merges. Moving either file, or retitling a section or
+  entry someone cites, means telling them.
 - **OpenForge2k's tests**, jmui's `ClaudeForge.Tests`, pin `2026.3.925` on `main`, test-only, since
   JanusMael/ClaudeForge#91 merged on 2026-09-25, and run BNXQ1001 alone. They use
   `XamlScanContext.Load`, `ExpanderAutomationNameRule`, and `XamlRuleResult.Inspected` /
