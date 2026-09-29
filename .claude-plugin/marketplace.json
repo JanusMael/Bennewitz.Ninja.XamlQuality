@@ -1,0 +1,15 @@
+{
+  "name": "xamlquality",
+  "description": "Bennewitz.Ninja.XamlQuality's method for desktop UIs an agent can drive and verify, served as a Claude Code skill beside the guide it condenses.",
+  "owner": {
+    "name": "JanusMael",
+    "url": "https://github.com/JanusMael"
+  },
+  "plugins": [
+    {
+      "name": "drivable-ui",
+      "source": "./docs/ai-drivable-ui/plugin",
+      "description": "Build and verify a desktop UI so an agent can drive and test it through its automation tree, by the method in docs/ai-drivable-ui.md."
+    }
+  ]
+}

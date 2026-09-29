@@ -1,0 +1,11 @@
+{
+  "name": "drivable-ui",
+  "description": "Build and verify a desktop UI so an agent can drive and test it through its automation tree: automation peers, AutomationIds, UI Automation harnesses that send no input, headless fixtures and captures. It condenses docs/ai-drivable-ui.md, the method's one living copy, and sends its reader there.",
+  "author": {
+    "name": "JanusMael",
+    "url": "https://github.com/JanusMael"
+  },
+  "homepage": "https://github.com/JanusMael/Bennewitz.Ninja.XamlQuality/blob/main/docs/ai-drivable-ui.md",
+  "repository": "https://github.com/JanusMael/Bennewitz.Ninja.XamlQuality",
+  "license": "MIT"
+}

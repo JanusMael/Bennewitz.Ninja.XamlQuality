@@ -22,6 +22,10 @@ Static analysis for XAML markup, shipped as two packages from one tag:
 | `Bennewitz.Ninja.XamlQuality` | `src/XamlQuality` | The rules library: `IXamlRule` implementations a consumer runs from its own tests |
 | `Bennewitz.Ninja.XamlQuality.ThemeAudit` | `src/XamlQuality.ThemeAudit` | The `theme-audit` dotnet tool: argument parsing and reporting over the library's `ThemeAudit` namespace |
 
+It also serves one Claude Code plugin from `main`, `drivable-ui`: the method in
+`docs/ai-drivable-ui.md`, condensed into a skill an agent loads. The plugin is not in either package,
+and it ships on merge rather than on a tag.
+
 The rules began as guards hand-rolled inside applications and copied from one to the next, each copy
 having learned a different subset of the cases. Extracting them was the point. `BNXQ1001` and `BNXQ1002`
 each turned out stricter than the guard it replaced, in ways nobody predicted: the guard behind
@@ -122,6 +126,7 @@ records which types are public and which stay internal.
 | `docs/avalonia-gotchas.md` | Measured Avalonia foot-guns, each with symptom, cause and fix. Moved here from ClaudeForge |
 | `docs/ai-drivable-ui.md` | The method for a desktop UI an agent can drive and verify, begun in TailBlazer. This is its one living copy; TailBlazer points here instead of keeping its own |
 | `docs/ai-drivable-ui/` | The tools and journals the guide links to, moved from TailBlazer's Avalonia port |
+| `docs/ai-drivable-ui/plugin/` | The guide condensed into the `drivable-ui` skill, served as a Claude Code plugin through `.claude-plugin/marketplace.json` at the root |
 | `docs/publishing.md` | Trusted publishing, the version rule, and verifying a release against the feed |
 
 The gotchas document lives beside the rules on purpose. An entry that can be checked mechanically is
@@ -201,6 +206,7 @@ counts.
 | The theme mappings reach a consumer's output as `Mappings/<name>.json` | `"mapping": "FluentToSemi"` is a file-not-found for every `PackageReference` consumer | The `None` item in `src/XamlQuality/XamlQuality.csproj`, where `Link`, `PackageCopyToOutput` and `PackagePath` are all load-bearing |
 | The release names each package it publishes; no step globs `*.nupkg` | A future packable project is published permanently, or attached to a GitHub Release nobody chose it for | `.github/workflows/release.yml`; tests `ReleaseWorkflowTests.The_release_workflow_names_every_package_it_publishes`, `ReleaseWorkflowTests.The_release_workflow_still_has_both_publishing_steps` |
 | `NUGET_USER` is a repository variable holding the nuget.org profile name, and a release refuses to run without it | A masked value hides why a login fails, and a tag with it unset creates a GitHub Release for a package that never shipped | `.github/workflows/release.yml`, step `Refuse to release without NUGET_USER`; `docs/publishing.md` |
+| The marketplace lists the `drivable-ui` plugin by a relative path that holds its manifest and skill, the guide gives the commands that install it, and neither manifest pins a `version` | Every `claude plugin install drivable-ui@xamlquality` fails or installs a plugin with no skill, the guide's commands name a plugin nobody serves, or every install stays on a stale copy of the skill | `.claude-plugin/marketplace.json`; `docs/ai-drivable-ui/plugin/`; tests `PluginMarketplaceTests.The_marketplace_lists_the_plugin_by_a_path_that_holds_its_manifest`, `PluginMarketplaceTests.The_skill_is_where_the_plugin_loads_skills_and_is_named_for_its_folder`, `PluginMarketplaceTests.No_version_is_pinned_so_an_update_picks_up_every_change`, `PluginMarketplaceTests.The_skill_sends_its_reader_to_the_guide_that_exists`, `PluginMarketplaceTests.The_guide_gives_the_commands_the_marketplace_answers_to` |
 
 ### 2. Commands
 

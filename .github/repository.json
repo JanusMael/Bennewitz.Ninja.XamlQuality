@@ -18,5 +18,7 @@
     "conventions"
   ],
   "content": [],
-  "undocumented": {}
+  "undocumented": {
+    ".claude-plugin": "Holds only marketplace.json, the manifest Claude Code reads to serve the drivable-ui plugin in docs/ai-drivable-ui/plugin/. docs/AGENTS.md describes both."
+  }
 }
