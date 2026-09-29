@@ -28,12 +28,13 @@ merges only, and both give a branch's commits new hashes, so a row cites its pul
 to `BNXQ1004` from it on. Each entry below keeps the ids of the release it pins, and a consumer that
 moves its pin past `2026.3.924` renames them in its test names, messages and comments.
 
-- **ScopedEditors' tests** pin `2026.3.925`, test-only, since JanusMael/Bennewitz.Ninja.ScopedEditors#7.
-  They run BNXQ1001 and BNXQ1002, through `InteractiveAutomationNameRule(additionalElements)`,
-  `ExpanderAutomationNameRule`, `XamlScanContext.Load`, `XamlFile.RelativePath` / `.Text` /
-  `.ParseError`, and `XamlRuleResult.Inspected` / `.Findings`; narrowing any of them breaks
-  ScopedEditors. By its own report the move was clean but for the renames: its markup writes no
-  empty `<AutomationProperties.Name>`, so `2026.3.924`'s stricter names found nothing there.
+- **ScopedEditors' tests** pin `2026.3.928`, test-only, since JanusMael/Bennewitz.Ninja.ScopedEditors#10,
+  which records the rules new in it as the owner's call. They run BNXQ1001 and BNXQ1002, through
+  `InteractiveAutomationNameRule(additionalElements)`, `ExpanderAutomationNameRule`,
+  `XamlScanContext.Load`, `XamlFile.RelativePath` / `.Text` / `.ParseError`, and
+  `XamlRuleResult.Inspected` / `.Findings`; narrowing any of them breaks ScopedEditors. By its own
+  report its move to `2026.3.925` was clean but for the renames: its markup writes no empty
+  `<AutomationProperties.Name>`, so `2026.3.924`'s stricter names found nothing there.
 - **ScopedEditors cites `docs/avalonia-gotchas.md` by path**, in `AppSeverityToGlyphConverter.cs` and
   its tests, `PropertyEditorWrapper.axaml` twice, and `DangerSurfaceMarkupTests.cs`. They rely on the
   entries about emoji-font fallback and about `AutomationProperties.Name` being ignored on a
@@ -49,11 +50,12 @@ moves its pin past `2026.3.924` renames them in its test names, messages and com
   JanusMael/ClaudeForge#91 merged on 2026-09-25, and run BNXQ1001 alone. They use
   `XamlScanContext.Load`, `ExpanderAutomationNameRule`, and `XamlRuleResult.Inspected` /
   `.Findings`.
-- **Templates' `bbavalonia` template** pins `2026.3.925` for the apps it generates, test-only, since
-  JanusMael/Bennewitz.Ninja.Templates#13. Their `AutomationNameTests` use `XamlScanContext.Load` and
-  `.Files`, `InteractiveAutomationNameRule()`, `ExpanderAutomationNameRule`, and
-  `XamlRuleResult.Inspected` / `.Findings`, and name BNXQ1001 and BNXQ1002 in their test names and
-  messages. Its `AGENTS.md` sends Avalonia and drivable-UI lessons here.
+- **Templates' `bbavalonia` template** pins `2026.3.928` for the apps it generates, test-only, since
+  JanusMael/Bennewitz.Ninja.Templates#17, published in Templates `2026.3.928`. Their
+  `AutomationNameTests` use `XamlScanContext.Load` and `.Files`, `InteractiveAutomationNameRule()`,
+  `InteractiveAutomationIdRule()`, `ExpanderAutomationNameRule`, and `XamlRuleResult.Inspected` /
+  `.Findings`, and name BNXQ1001, BNXQ1002 and BNXQ1007 in their test names and messages. Its
+  `AGENTS.md` sends Avalonia and drivable-UI lessons here.
 - **DiffView**'s tests pin `2026.3.924` on its `main` (`ec61a10`), test-only. They run XQ1002 with
   DiffView's own element names beside `InteractiveAutomationNameRule.FrameworkInteractiveElements`,
   and XQ1003 and XQ1004. DiffView also runs the audit and commits its report.
